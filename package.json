@@ -1,0 +1,12 @@
+{
+  "name": "app-studymate",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev:api": "npm run dev --workspace @app-studymate/api",
+    "db:migrate": "npm run prisma:migrate --workspace @app-studymate/api",
+    "db:seed": "npm run prisma:seed --workspace @app-studymate/api"
+  }
+}

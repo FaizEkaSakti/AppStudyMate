@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+}
+
+model User {
+  Id           String     @id @default(cuid())
+  Name         String
+  Email        String     @unique
+  PasswordHash String
+  Nim          String
+  CreatedAt    DateTime   @default(now())
+  Schedules    Schedule[]
+  Tasks        Task[]
+  Notes        Note[]
+}
+
+model Schedule {
+  Id         String   @id @default(cuid())
+  UserId     String
+  CourseName String
+  Lecturer   String
+  Day        String
+  StartTime  String
+  EndTime    String
+  Room       String
+  CreatedAt  DateTime @default(now())
+  User       User     @relation(fields: [UserId], references: [Id], onDelete: Cascade)
+
+  @@index([UserId, Day])
+}
+
+model Task {
+  Id          String     @id @default(cuid())
+  UserId      String
+  Title       String
+  Description String     @db.Text
+  Deadline    DateTime
+  Status      TaskStatus @default(TODO)
+  CreatedAt   DateTime   @default(now())
+  UpdatedAt   DateTime   @updatedAt
+  User        User       @relation(fields: [UserId], references: [Id], onDelete: Cascade)
+  Notes       Note[]
+
+  @@index([UserId, Status, Deadline])
+}
+
+model Note {
+  Id            String    @id @default(cuid())
+  UserId        String
+  Title         String
+  Content       String    @db.Text
+  RelatedTaskId String?
+  CreatedAt     DateTime  @default(now())
+  UpdatedAt     DateTime  @updatedAt
+  User          User      @relation(fields: [UserId], references: [Id], onDelete: Cascade)
+  RelatedTask   Task?     @relation(fields: [RelatedTaskId], references: [Id], onDelete: SetNull)
+
+  @@index([UserId, UpdatedAt])
+}
