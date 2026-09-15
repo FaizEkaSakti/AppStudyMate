@@ -43,6 +43,20 @@ class StudyMateApp extends StatelessWidget {
 
 class ApiClient {
   String? token;
+  final Map<String, List<Map<String, dynamic>>> localData = {
+    'schedules': [
+      {'Id': 's1', 'CourseName': 'Pemrograman Web', 'Lecturer': 'Dr. Sari', 'Day': 'Senin', 'StartTime': '08:00', 'EndTime': '10:00', 'Room': 'Lab A'},
+      {'Id': 's2', 'CourseName': 'Basis Data', 'Lecturer': 'Bpk. Andi', 'Day': 'Rabu', 'StartTime': '10:00', 'EndTime': '12:00', 'Room': 'Ruang 204'},
+    ],
+    'tasks': [
+      {'Id': 't1', 'Title': 'API katalog buku', 'Description': 'Membuat endpoint katalog buku', 'Deadline': DateTime.now().add(const Duration(days: 2)).toIso8601String(), 'Status': 'IN_PROGRESS', 'Urgency': 'DUE_SOON'},
+      {'Id': 't2', 'Title': 'Review proposal', 'Description': 'Review proposal skripsi', 'Deadline': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(), 'Status': 'TODO', 'Urgency': 'OVERDUE'},
+    ],
+    'notes': [
+      {'Id': 'n1', 'Title': 'Catatan REST API', 'Content': 'REST menggunakan resource dan HTTP method.', 'RelatedTaskId': 't1'},
+      {'Id': 'n2', 'Title': 'Normalisasi database', 'Content': 'Pastikan setiap atribut bernilai atomik pada 1NF.'},
+    ],
+  };
   bool get firebaseReady => kIsWeb && useFirebase && firebaseConfigured;
 
   Future<void> init() async {
@@ -84,8 +98,40 @@ class ApiClient {
   }
 
   Future<List<dynamic>> list(String path) async {
+    final type = path.replaceFirst('/', '');
+    if (!firebaseReady && localData.containsKey(type)) return localData[type]!;
+    if (firebaseReady && localData.containsKey(type)) {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) throw Exception('Sesi Firebase tidak ditemukan');
+      final snapshot = await FirebaseFirestore.instance.collection(type).where('UserId', isEqualTo: userId).get();
+      return snapshot.docs.map((document) => {'Id': document.id, ...document.data()}).toList();
+    }
     final response = await request(path);
     return response is List<dynamic> ? response : [];
+  }
+
+  Future<void> saveItem(String type, Map<String, dynamic> item) async {
+    if (firebaseReady) {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) throw Exception('Sesi Firebase tidak ditemukan');
+      await FirebaseFirestore.instance.collection(type).doc(item['Id'] as String).set({...item, 'UserId': userId});
+      return;
+    }
+    final items = localData[type]!;
+    final index = items.indexWhere((entry) => entry['Id'] == item['Id']);
+    if (index == -1) {
+      items.add(item);
+    } else {
+      items[index] = item;
+    }
+  }
+
+  Future<void> deleteItem(String type, String id) async {
+    if (firebaseReady) {
+      await FirebaseFirestore.instance.collection(type).doc(id).delete();
+      return;
+    }
+    localData[type]!.removeWhere((item) => item['Id'] == id);
   }
 
   Future<dynamic> _mockRequest(String path, {String method = 'GET', Map<String, dynamic>? body}) async {
@@ -123,26 +169,7 @@ class ApiClient {
       };
     }
 
-    if (path == '/schedules') {
-      return [
-      {'Id': 's1', 'CourseName': 'Pemrograman Web', 'Lecturer': 'Dr. Sari', 'Day': 'Senin', 'StartTime': '08:00', 'EndTime': '10:00', 'Room': 'Lab A'},
-      {'Id': 's2', 'CourseName': 'Basis Data', 'Lecturer': 'Bpk. Andi', 'Day': 'Rabu', 'StartTime': '10:00', 'EndTime': '12:00', 'Room': 'Ruang 204'},
-    ];
-    }
-
-    if (path == '/tasks') {
-      return [
-      {'Id': 't1', 'Title': 'API katalog buku', 'Description': 'Membuat endpoint katalog buku', 'Deadline': DateTime.now().add(const Duration(days: 2)).toIso8601String(), 'Status': 'IN_PROGRESS', 'Urgency': 'DUE_SOON'},
-      {'Id': 't2', 'Title': 'Review proposal', 'Description': 'Review proposal skripsi', 'Deadline': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(), 'Status': 'TODO', 'Urgency': 'OVERDUE'},
-    ];
-    }
-
-    if (path == '/notes') {
-      return [
-      {'Id': 'n1', 'Title': 'Catatan REST API', 'Content': 'REST menggunakan resource dan HTTP method.', 'RelatedTaskId': 't1'},
-      {'Id': 'n2', 'Title': 'Normalisasi database', 'Content': 'Pastikan setiap atribut bernilai atomik pada 1NF.'},
-    ];
-    }
+    if (localData.containsKey(path.replaceFirst('/', ''))) return localData[path.replaceFirst('/', '')];
 
     if (path.startsWith('/profile')) return userMap;
     return {};
@@ -168,6 +195,7 @@ class _SessionGateState extends State<SessionGate> {
   }
 
   Future<void> restore() async {
+    await client.init();
     final preferences = await SharedPreferences.getInstance();
     final token = preferences.getString('token');
     final savedUser = preferences.getString('user');
@@ -320,14 +348,186 @@ class DataList extends StatefulWidget {
 class _DataListState extends State<DataList> {
   late Future<List<dynamic>> future;
   @override
-  void initState() { super.initState(); future = widget.client.list('/${widget.type}'); }
+  void initState() { super.initState(); _reload(); }
+
+  void _reload() => future = widget.client.list('/${widget.type}');
+
+  Future<void> _edit([Map<String, dynamic>? item]) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => ItemForm(type: widget.type, item: item),
+    );
+    if (result == null) return;
+    await widget.client.saveItem(widget.type, result);
+    if (mounted) setState(_reload);
+  }
+
+  Future<void> _delete(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Hapus data?'),
+        content: const Text('Data yang dihapus tidak dapat dikembalikan.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Hapus')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await widget.client.deleteItem(widget.type, id);
+    if (mounted) setState(_reload);
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<List<dynamic>>(future: future, builder: (context, snapshot) {
     if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
     final items = snapshot.data ?? [];
-    return ListView(padding: const EdgeInsets.all(20), children: [if (items.isEmpty) const Padding(padding: EdgeInsets.only(top: 60), child: Center(child: Text('Belum ada data', style: TextStyle(color: muted)))), ...items.map((item) { final data = item as Map<String, dynamic>; final title = data['Title'] ?? data['CourseName'] ?? 'Item'; final detail = data['Description'] ?? data['Content'] ?? '${data['Day'] ?? ''} ${data['StartTime'] ?? ''}'; return Card(color: paper, child: ListTile(title: Text(title.toString(), style: const TextStyle(color: ink, fontWeight: FontWeight.w700)), subtitle: Text(detail.toString(), maxLines: 2, overflow: TextOverflow.ellipsis), leading: Icon(widget.type == 'tasks' ? Icons.check_circle_outline : widget.type == 'notes' ? Icons.notes_outlined : Icons.schedule, color: teal))); })]);
+    return Stack(children: [
+      ListView(padding: const EdgeInsets.fromLTRB(20, 20, 20, 90), children: [
+        if (items.isEmpty) const Padding(padding: EdgeInsets.only(top: 60), child: Center(child: Text('Belum ada data', style: TextStyle(color: muted)))),
+        ...items.map((item) {
+          final data = item as Map<String, dynamic>;
+          final title = data['Title'] ?? data['CourseName'] ?? 'Item';
+          final detail = widget.type == 'tasks'
+              ? '${data['Description'] ?? ''}\nDeadline: ${formatDate(data['Deadline'])} - ${statusLabel(data['Status'])}'
+              : widget.type == 'notes'
+                  ? data['Content'] ?? ''
+                  : '${data['Day'] ?? ''} | ${data['StartTime'] ?? ''}-${data['EndTime'] ?? ''} | ${data['Room'] ?? ''}';
+          return Card(color: paper, child: ListTile(
+            isThreeLine: widget.type == 'tasks',
+            title: Text(title.toString(), style: const TextStyle(color: ink, fontWeight: FontWeight.w700)),
+            subtitle: Text(detail.toString(), maxLines: 3, overflow: TextOverflow.ellipsis),
+            leading: Icon(widget.type == 'tasks' ? Icons.check_circle_outline : widget.type == 'notes' ? Icons.notes_outlined : Icons.schedule, color: teal),
+            trailing: PopupMenuButton<String>(
+              onSelected: (action) => action == 'edit' ? _edit(data) : _delete(data['Id'].toString()),
+              itemBuilder: (_) => const [PopupMenuItem(value: 'edit', child: Text('Edit')), PopupMenuItem(value: 'delete', child: Text('Hapus'))],
+            ),
+          ));
+        }),
+      ]),
+      Positioned(right: 20, bottom: 20, child: FloatingActionButton.extended(onPressed: () => _edit(), backgroundColor: teal, icon: const Icon(Icons.add), label: Text(widget.type == 'schedules' ? 'Jadwal' : widget.type == 'tasks' ? 'Tugas' : 'Catatan'))),
+    ]);
   });
 }
+
+String formatDate(dynamic value) {
+  if (value == null || value.toString().isEmpty) return '-';
+  final date = DateTime.tryParse(value.toString());
+  if (date == null) return value.toString();
+  return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+}
+
+String statusLabel(dynamic value) => switch (value) {
+      'DONE' => 'Selesai',
+      'IN_PROGRESS' => 'Dikerjakan',
+      _ => 'Belum dikerjakan',
+    };
+
+class ItemForm extends StatefulWidget {
+  const ItemForm({required this.type, this.item, super.key});
+  final String type;
+  final Map<String, dynamic>? item;
+
+  @override
+  State<ItemForm> createState() => _ItemFormState();
+}
+
+class _ItemFormState extends State<ItemForm> {
+  late final Map<String, TextEditingController> fields;
+  late String status;
+  DateTime? deadline;
+
+  @override
+  void initState() {
+    super.initState();
+    final item = widget.item ?? {};
+    fields = {for (final key in widget.type == 'schedules' ? ['CourseName', 'Lecturer', 'Day', 'StartTime', 'EndTime', 'Room'] : widget.type == 'tasks' ? ['Title', 'Description'] : ['Title', 'Content']) key: TextEditingController(text: item[key]?.toString() ?? '')};
+    status = item['Status']?.toString() ?? 'TODO';
+    deadline = DateTime.tryParse(item['Deadline']?.toString() ?? '');
+  }
+
+  @override
+  void dispose() {
+    for (final controller in fields.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> pickDeadline() async {
+    final picked = await showDatePicker(context: context, initialDate: deadline ?? DateTime.now(), firstDate: DateTime.now().subtract(const Duration(days: 365)), lastDate: DateTime.now().add(const Duration(days: 3650)));
+    if (picked != null) setState(() => deadline = picked);
+  }
+
+  void submit() {
+    if (fields.values.any((controller) => controller.text.trim().isEmpty)) return;
+    final item = {for (final entry in fields.entries) entry.key: entry.value.text.trim(), 'Id': widget.item?['Id'] ?? '${widget.type}-${DateTime.now().microsecondsSinceEpoch}'};
+    if (widget.type == 'tasks') {
+      item['Status'] = status;
+      item['Deadline'] = (deadline ?? DateTime.now()).toIso8601String();
+    }
+    Navigator.pop(context, item);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = widget.type == 'schedules' ? 'jadwal' : widget.type == 'tasks' ? 'tugas' : 'catatan';
+    return AlertDialog(
+      title: Text(widget.item == null ? 'Tambah $label' : 'Edit $label'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ...fields.entries.map((entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: TextField(
+                controller: entry.value,
+                maxLines: entry.key == 'Description' || entry.key == 'Content' ? 3 : 1,
+                decoration: InputDecoration(labelText: fieldLabel(entry.key)),
+              ),
+            )),
+            if (widget.type == 'tasks') ...[
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Deadline'),
+                subtitle: Text(deadline == null ? 'Pilih tanggal' : formatDate(deadline)),
+                trailing: const Icon(Icons.calendar_today_outlined),
+                onTap: pickDeadline,
+              ),
+              DropdownButtonFormField<String>(
+                initialValue: status,
+                decoration: const InputDecoration(labelText: 'Status'),
+                items: const [
+                  DropdownMenuItem(value: 'TODO', child: Text('Belum dikerjakan')),
+                  DropdownMenuItem(value: 'IN_PROGRESS', child: Text('Dikerjakan')),
+                  DropdownMenuItem(value: 'DONE', child: Text('Selesai')),
+                ],
+                onChanged: (value) => setState(() => status = value ?? 'TODO'),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+        FilledButton(onPressed: submit, child: const Text('Simpan')),
+      ],
+    );
+  }
+}
+
+String fieldLabel(String key) => switch (key) {
+      'CourseName' => 'Mata kuliah',
+      'Lecturer' => 'Dosen',
+      'Day' => 'Hari',
+      'StartTime' => 'Jam mulai',
+      'EndTime' => 'Jam selesai',
+      'Room' => 'Ruangan',
+      'Description' => 'Deskripsi',
+      'Content' => 'Isi catatan',
+      _ => 'Judul',
+    };
 
 class Profile extends StatelessWidget {
   const Profile({required this.user, required this.onLogout, super.key});
