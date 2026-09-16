@@ -7,9 +7,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const bool useFirebase = bool.fromEnvironment('USE_FIREBASE', defaultValue: false);
-const bool firebaseConfigured = bool.fromEnvironment('FIREBASE_CONFIGURED', defaultValue: false);
-const apiUrl = String.fromEnvironment('API_URL', defaultValue: 'http://localhost:4000/api');
+const firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY', defaultValue: 'AIzaSyBsTO332dtvoRfqy321FASqDhTeFzUD6Xc');
+const firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID', defaultValue: '1:185834578847:web:cb2cf16c3fede5f25353aa');
+const firebaseMessagingSenderId = String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID', defaultValue: '185834578847');
+const firebaseProjectId = String.fromEnvironment('FIREBASE_PROJECT_ID', defaultValue: 'appstudymate-13de0');
+const firebaseAuthDomain = String.fromEnvironment('FIREBASE_AUTH_DOMAIN', defaultValue: 'appstudymate-13de0.firebaseapp.com');
+const firebaseStorageBucket = String.fromEnvironment('FIREBASE_STORAGE_BUCKET', defaultValue: 'appstudymate-13de0.firebasestorage.app');
 const ink = Color(0xff18323a);
 const muted = Color(0xff718087);
 const cream = Color(0xfff7f4ed);
@@ -43,137 +46,184 @@ class StudyMateApp extends StatelessWidget {
 
 class ApiClient {
   String? token;
+  Map<String, dynamic>? localUser;
+  List<Map<String, dynamic>> localUsers = [];
+  bool firebaseDisabled = false;
   final Map<String, List<Map<String, dynamic>>> localData = {
-    'schedules': [
-      {'Id': 's1', 'CourseName': 'Pemrograman Web', 'Lecturer': 'Dr. Sari', 'Day': 'Senin', 'StartTime': '08:00', 'EndTime': '10:00', 'Room': 'Lab A'},
-      {'Id': 's2', 'CourseName': 'Basis Data', 'Lecturer': 'Bpk. Andi', 'Day': 'Rabu', 'StartTime': '10:00', 'EndTime': '12:00', 'Room': 'Ruang 204'},
-    ],
-    'tasks': [
-      {'Id': 't1', 'Title': 'API katalog buku', 'Description': 'Membuat endpoint katalog buku', 'Deadline': DateTime.now().add(const Duration(days: 2)).toIso8601String(), 'Status': 'IN_PROGRESS', 'Urgency': 'DUE_SOON'},
-      {'Id': 't2', 'Title': 'Review proposal', 'Description': 'Review proposal skripsi', 'Deadline': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(), 'Status': 'TODO', 'Urgency': 'OVERDUE'},
-    ],
-    'notes': [
-      {'Id': 'n1', 'Title': 'Catatan REST API', 'Content': 'REST menggunakan resource dan HTTP method.', 'RelatedTaskId': 't1'},
-      {'Id': 'n2', 'Title': 'Normalisasi database', 'Content': 'Pastikan setiap atribut bernilai atomik pada 1NF.'},
-    ],
+    'schedules': [],
+    'tasks': [],
+    'notes': [],
   };
-  bool get firebaseReady => kIsWeb && useFirebase && firebaseConfigured;
+  bool get firebaseConfigProvided => firebaseApiKey.isNotEmpty || firebaseAppId.isNotEmpty || firebaseProjectId.isNotEmpty;
+  bool get firebaseReady => !firebaseDisabled && kIsWeb && firebaseApiKey.startsWith('AIza') && firebaseAppId.startsWith('1:') && firebaseProjectId.isNotEmpty && !firebaseProjectId.contains('PROJECT_ID') && !firebaseProjectId.contains('nama-project');
 
   Future<void> init() async {
-    if (!firebaseReady) return;
-    await Firebase.initializeApp(
-      options: const FirebaseOptions(
-        apiKey: '',
-        appId: '',
-        messagingSenderId: '',
-        projectId: '',
-        authDomain: '',
-        storageBucket: '',
-      ),
-    );
+    if (!firebaseConfigProvided) {
+      await _loadLocalData();
+      return;
+    }
+    if (!firebaseReady) {
+      throw Exception('Konfigurasi Firebase Web tidak valid. Gunakan apiKey, appId, dan projectId asli dari Firebase Console.');
+    }
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: const FirebaseOptions(
+            apiKey: firebaseApiKey,
+            appId: firebaseAppId,
+            messagingSenderId: firebaseMessagingSenderId,
+            projectId: firebaseProjectId,
+            authDomain: firebaseAuthDomain,
+            storageBucket: firebaseStorageBucket,
+          ),
+        );
+      }
+    } catch (exception) {
+      throw Exception('Firebase gagal diinisialisasi: $exception');
+    }
+  }
+
+  Future<void> _loadLocalData() async {
+    final preferences = await SharedPreferences.getInstance();
+    final savedUsers = preferences.getString('local_users');
+    if (savedUsers != null) {
+      localUsers = (jsonDecode(savedUsers) as List).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+      localUser = localUsers.isEmpty ? null : localUsers.last;
+    }
+    final savedUser = preferences.getString('local_user');
+    if (savedUser != null) localUser = jsonDecode(savedUser) as Map<String, dynamic>;
+    for (final type in localData.keys) {
+      final savedItems = preferences.getString(type);
+      if (savedItems != null) localData[type] = (jsonDecode(savedItems) as List).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+    }
   }
 
   Future<dynamic> request(String path, {String method = 'GET', Map<String, dynamic>? body}) async {
-    if (!firebaseReady) return _mockRequest(path, method: method, body: body);
+    if (!firebaseReady) return localRequest(path, body: body);
 
     if (path == '/auth/login') {
       final email = body!['Email'] as String? ?? '';
       final password = body['Password'] as String? ?? '';
       final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: password);
       final user = userCredential.user;
-      return {'Token': await userCredential.user?.getIdToken() ?? '', 'User': {'Id': user?.uid ?? '', 'Name': user?.displayName ?? 'User', 'Email': user?.email ?? email, 'Nim': ''}};
+      if (user == null) throw Exception('Firebase tidak mengembalikan user setelah login');
+      final profile = await _findProfile(user, email);
+      return {'Token': await user.getIdToken() ?? '', 'User': {'Id': user.uid, 'Name': profile['Name'] ?? user.displayName ?? 'User', 'Email': user.email ?? email, 'Nim': profile['Nim'] ?? ''}};
     }
 
     if (path == '/auth/register') {
-      final email = body!['Email'] as String? ?? '';
+      final email = (body!['Email'] as String? ?? '').trim().toLowerCase();
       final password = body['Password'] as String? ?? '';
       final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: email, password: password);
       final user = userCredential.user;
-      await user?.updateDisplayName(body['Name'] as String? ?? 'User');
-      await FirebaseFirestore.instance.collection('users').doc(user?.uid).set({'Name': body['Name'] ?? '', 'Email': email, 'Nim': body['Nim'] ?? ''});
-      return {'Token': await user?.getIdToken() ?? '', 'User': {'Id': user?.uid ?? '', 'Name': body['Name'] ?? '', 'Email': email, 'Nim': body['Nim'] ?? ''}};
+      if (user == null) throw Exception('Firebase tidak mengembalikan user setelah pendaftaran');
+      final name = (body['Name'] as String? ?? 'User').trim();
+      final nim = (body['Nim'] as String? ?? '').trim();
+      await user.updateDisplayName(name);
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+        'UserId': user.uid,
+        'Name': name,
+        'Email': email,
+        'Nim': nim,
+        'CreatedAt': FieldValue.serverTimestamp(),
+      });
+      return {'Token': await user.getIdToken() ?? '', 'User': {'Id': user.uid, 'Name': name, 'Email': email, 'Nim': nim}};
     }
 
-    return {'Message': 'Firebase mode belum dikonfigurasi'};
+    if (path == '/dashboard') {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) throw Exception('Sesi Firebase tidak ditemukan');
+      final tasks = await FirebaseFirestore.instance.collection('tasks').where('UserId', isEqualTo: userId).get();
+      final schedules = await FirebaseFirestore.instance.collection('schedules').where('UserId', isEqualTo: userId).get();
+      final notes = await FirebaseFirestore.instance.collection('notes').where('UserId', isEqualTo: userId).get();
+      final completed = tasks.docs.where((document) => document.data()['Status'] == 'DONE').length;
+      return {'Summary': {'TotalTasks': tasks.size, 'TotalCompletedTasks': completed, 'TotalPendingTasks': tasks.size - completed, 'TotalOverdueTasks': 0, 'TotalSchedulesToday': schedules.size, 'TotalNotes': notes.size}};
+    }
+    throw Exception('Endpoint tidak tersedia');
+  }
+
+  Future<Map<String, dynamic>> firebaseUser() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return {};
+    final profile = await _findProfile(currentUser, currentUser.email ?? '');
+    return {'Id': currentUser.uid, 'Name': profile['Name'] ?? currentUser.displayName ?? 'User', 'Email': currentUser.email ?? '', 'Nim': profile['Nim'] ?? ''};
+  }
+
+  Future<Map<String, dynamic>> _findProfile(User user, String email) async {
+    final byId = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    if (byId.exists) return byId.data() ?? {};
+    final byEmail = await FirebaseFirestore.instance.collection('users').where('Email', isEqualTo: email).limit(1).get();
+    return byEmail.docs.isEmpty ? {} : byEmail.docs.first.data();
   }
 
   Future<List<dynamic>> list(String path) async {
     final type = path.replaceFirst('/', '');
-    if (!firebaseReady && localData.containsKey(type)) return localData[type]!;
-    if (firebaseReady && localData.containsKey(type)) {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId == null) throw Exception('Sesi Firebase tidak ditemukan');
-      final snapshot = await FirebaseFirestore.instance.collection(type).where('UserId', isEqualTo: userId).get();
-      return snapshot.docs.map((document) => {'Id': document.id, ...document.data()}).toList();
-    }
-    final response = await request(path);
-    return response is List<dynamic> ? response : [];
+    if (!firebaseReady) return localData[type] ?? [];
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) throw Exception('Sesi Firebase tidak ditemukan');
+    final snapshot = await FirebaseFirestore.instance.collection(type).where('UserId', isEqualTo: userId).get();
+    return snapshot.docs.map((document) => {'Id': document.id, ...document.data()}).toList();
   }
 
   Future<void> saveItem(String type, Map<String, dynamic> item) async {
-    if (firebaseReady) {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId == null) throw Exception('Sesi Firebase tidak ditemukan');
-      await FirebaseFirestore.instance.collection(type).doc(item['Id'] as String).set({...item, 'UserId': userId});
+    if (!firebaseReady) {
+      final items = localData[type]!;
+      final index = items.indexWhere((entry) => entry['Id'] == item['Id']);
+      if (index == -1) {
+        items.add(item);
+      } else {
+        items[index] = item;
+      }
+      await _persistLocal(type);
       return;
     }
-    final items = localData[type]!;
-    final index = items.indexWhere((entry) => entry['Id'] == item['Id']);
-    if (index == -1) {
-      items.add(item);
-    } else {
-      items[index] = item;
-    }
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) throw Exception('Sesi Firebase tidak ditemukan');
+    await FirebaseFirestore.instance.collection(type).doc(item['Id'] as String).set({...item, 'UserId': userId});
   }
 
   Future<void> deleteItem(String type, String id) async {
-    if (firebaseReady) {
-      await FirebaseFirestore.instance.collection(type).doc(id).delete();
+    if (!firebaseReady) {
+      localData[type]!.removeWhere((item) => item['Id'] == id);
+      await _persistLocal(type);
       return;
     }
-    localData[type]!.removeWhere((item) => item['Id'] == id);
+    await FirebaseFirestore.instance.collection(type).doc(id).delete();
   }
 
-  Future<dynamic> _mockRequest(String path, {String method = 'GET', Map<String, dynamic>? body}) async {
-    final userMap = {
-      'Id': 'demo-user-id',
-      'Name': 'Budi Mahasiswa',
-      'Email': 'mahasiswa@example.com',
-      'Nim': '20240001',
-    };
+  Future<void> _persistLocal(String type) async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(type, jsonEncode(localData[type]));
+  }
 
-    if (path == '/auth/login') {
-      final email = body?['Email'] as String? ?? '';
-      final password = body?['Password'] as String? ?? '';
-      if (email == 'mahasiswa@example.com' && password == 'password123') {
-        return {'Token': 'demo-token', 'User': userMap};
-      }
-      throw Exception('Email atau password salah');
-    }
-
+  Future<dynamic> localRequest(String path, {Map<String, dynamic>? body}) async {
     if (path == '/auth/register') {
-      return {'Token': 'demo-token', 'User': {'Id': 'demo-user-id', 'Name': body?['Name'] ?? 'User', 'Email': body?['Email'] ?? '', 'Nim': body?['Nim'] ?? ''}};
+      final email = body?['Email']?.toString().trim().toLowerCase() ?? '';
+      if (localUsers.any((account) => account['Email'] == email)) throw Exception('Email sudah terdaftar');
+      localUser = {'Id': 'local-user', 'Name': body?['Name'] ?? '', 'Email': email, 'Nim': body?['Nim'] ?? '', 'Password': body?['Password'] ?? ''};
+      localUsers.add(localUser!);
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString('local_user', jsonEncode(localUser));
+      await preferences.setString('local_users', jsonEncode(localUsers));
+      return {'Token': 'local-token', 'User': localUser};
     }
-
+    if (path == '/auth/login') {
+      final email = body?['Email']?.toString().trim().toLowerCase();
+      final account = localUsers.cast<Map<String, dynamic>?>().firstWhere((item) => item?['Email'] == email && item?['Password'] == body?['Password'], orElse: () => null);
+      if (account == null) throw Exception('Email atau password salah');
+      localUser = account;
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString('local_user', jsonEncode(localUser));
+      return {'Token': 'local-token', 'User': localUser};
+    }
     if (path == '/dashboard') {
-      return {
-        'Summary': {'TotalTasks': 5, 'TotalCompletedTasks': 1, 'TotalPendingTasks': 3, 'TotalOverdueTasks': 1, 'TotalSchedulesToday': 2, 'TotalNotes': 2},
-        'TodaySchedules': [
-          {'Id': 's1', 'CourseName': 'Pemrograman Web', 'Lecturer': 'Dr. Sari', 'Day': 'Senin', 'StartTime': '08:00', 'EndTime': '10:00', 'Room': 'Lab A'},
-          {'Id': 's2', 'CourseName': 'Basis Data', 'Lecturer': 'Bpk. Andi', 'Day': 'Rabu', 'StartTime': '10:00', 'EndTime': '12:00', 'Room': 'Ruang 204'},
-        ],
-        'UpcomingTasks': [
-          {'Id': 't1', 'Title': 'API katalog buku', 'Description': 'Membuat endpoint katalog buku', 'Deadline': DateTime.now().add(const Duration(days: 2)).toIso8601String(), 'Status': 'IN_PROGRESS', 'Urgency': 'DUE_SOON'},
-          {'Id': 't2', 'Title': 'Laporan basis data', 'Description': 'Menyelesaikan laporan normalisasi', 'Deadline': DateTime.now().add(const Duration(days: 5)).toIso8601String(), 'Status': 'TODO', 'Urgency': 'ON_TRACK'},
-        ],
-      };
+      final tasks = localData['tasks']!;
+      final completed = tasks.where((item) => item['Status'] == 'DONE').length;
+      return {'Summary': {'TotalTasks': tasks.length, 'TotalCompletedTasks': completed, 'TotalPendingTasks': tasks.length - completed, 'TotalOverdueTasks': 0, 'TotalSchedulesToday': localData['schedules']!.length, 'TotalNotes': localData['notes']!.length}};
     }
-
-    if (localData.containsKey(path.replaceFirst('/', ''))) return localData[path.replaceFirst('/', '')];
-
-    if (path.startsWith('/profile')) return userMap;
-    return {};
+    throw Exception('Data belum tersedia');
   }
+
 }
 
 class SessionGate extends StatefulWidget {
@@ -187,6 +237,7 @@ class _SessionGateState extends State<SessionGate> {
   final client = ApiClient();
   Map<String, dynamic>? user;
   bool loading = true;
+  String? startupError;
 
   @override
   void initState() {
@@ -195,13 +246,25 @@ class _SessionGateState extends State<SessionGate> {
   }
 
   Future<void> restore() async {
-    await client.init();
-    final preferences = await SharedPreferences.getInstance();
-    final token = preferences.getString('token');
-    final savedUser = preferences.getString('user');
-    if (token != null && savedUser != null) {
-      client.token = token;
-      user = jsonDecode(savedUser) as Map<String, dynamic>;
+    try {
+      await client.init().timeout(const Duration(seconds: 10));
+      final preferences = await SharedPreferences.getInstance();
+      if (client.firebaseReady) {
+        user = await client.firebaseUser();
+        if (user!.isNotEmpty) client.token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      } else if (!client.firebaseReady && client.localUser != null) {
+        client.token = 'local-token';
+        user = client.localUser;
+      } else {
+        final token = preferences.getString('token');
+        final savedUser = preferences.getString('user');
+        if (token != null && savedUser != null) {
+          client.token = token;
+          user = jsonDecode(savedUser) as Map<String, dynamic>;
+        }
+      }
+    } catch (exception) {
+      startupError = exception.toString().replaceFirst('Exception: ', '');
     }
     if (mounted) setState(() => loading = false);
   }
@@ -219,10 +282,35 @@ class _SessionGateState extends State<SessionGate> {
   @override
   Widget build(BuildContext context) {
     if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (startupError != null) {
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.cloud_off, size: 48, color: coral),
+              const SizedBox(height: 16),
+              const Text('Firebase belum siap', style: TextStyle(color: ink, fontSize: 22, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              Text(startupError!, textAlign: TextAlign.center, style: const TextStyle(color: muted)),
+              const SizedBox(height: 20),
+              FilledButton.icon(onPressed: () { setState(() { loading = true; startupError = null; }); restore(); }, icon: const Icon(Icons.refresh), label: const Text('Coba lagi')),
+            ]),
+          ),
+        ),
+      );
+    }
     if (user == null) return LoginPage(onLogin: login);
     return HomePage(client: client, user: user!, onLogout: () async {
-      final preferences = await SharedPreferences.getInstance();
-      await preferences.clear();
+      if (client.firebaseReady) {
+        await FirebaseAuth.instance.signOut();
+      } else {
+        final preferences = await SharedPreferences.getInstance();
+        await preferences.remove('token');
+        await preferences.remove('user');
+        await preferences.remove('local_user');
+        client.localUser = null;
+      }
       client.token = null;
       if (mounted) setState(() => user = null);
     });
