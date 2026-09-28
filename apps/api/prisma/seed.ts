@@ -2,12 +2,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as dotenv from "dotenv";
 import bcrypt from "bcryptjs";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
-
-const { Prisma, PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
 
@@ -38,6 +37,38 @@ async function seed(): Promise<void> {
     { UserId: user.Id, Title: "Catatan REST API", Content: "REST menggunakan resource dan HTTP method.", RelatedTaskId: tasks[0].Id },
     { UserId: user.Id, Title: "Normalisasi database", Content: "Pastikan setiap atribut bernilai atomik pada 1NF." }
   ] });
+
+  const course = await prisma.course.upsert({
+    where: { Id: "app-studymate-demo-course" },
+    update: {},
+    create: { Id: "app-studymate-demo-course", Name: "Pemrograman Web", Semester: "Ganjil", Year: 2026 }
+  });
+  const students = await Promise.all([
+    { StudentNumber: "20260001", Name: "Alya Putri", Email: "alya@example.com", GithubUsername: "octocat", RepositoryUrl: "https://github.com/octocat/Hello-World" },
+    { StudentNumber: "20260002", Name: "Raka Pratama", Email: "raka@example.com", GithubUsername: "octocat", RepositoryUrl: "https://github.com/octocat/Spoon-Knife" },
+    { StudentNumber: "20260003", Name: "Nadia Safitri", Email: "nadia@example.com", GithubUsername: "octocat", RepositoryUrl: "https://github.com/octocat/Hello-World" }
+  ].map(async (item) => {
+    const student = await prisma.student.upsert({
+      where: { CourseId_StudentNumber: { CourseId: course.Id, StudentNumber: item.StudentNumber } },
+      update: {},
+      create: {
+        CourseId: course.Id,
+        StudentNumber: item.StudentNumber,
+        Name: item.Name,
+        Email: item.Email,
+        GithubUsername: item.GithubUsername
+      }
+    });
+    const exists = await prisma.repository.findFirst({ where: { StudentId: student.Id, RepositoryUrl: item.RepositoryUrl } });
+    if (!exists) {
+      const [Owner, RepositoryName] = item.RepositoryUrl.replace("https://github.com/", "").split("/");
+      await prisma.repository.create({
+        data: { StudentId: student.Id, Name: RepositoryName, RepositoryUrl: item.RepositoryUrl, Owner, RepositoryName }
+      });
+    }
+    return student;
+  }));
+  console.log(`Tracker seed siap untuk ${students.length} mahasiswa.`);
 }
 
 seed().finally(() => prisma.$disconnect());

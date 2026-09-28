@@ -7,16 +7,17 @@ Dokumen ini menjelaskan arsitektur, komponen utama, dan teknologi yang digunakan
 Project ini menggunakan pendekatan monorepo dengan tiga area utama:
 
 - `apps/api` : backend REST API menggunakan Node.js + Express + TypeScript
-- `apps/mobile` : aplikasi client Android/iOS/desktop web menggunakan Flutter
+- `apps/web` : dashboard web mahasiswa menggunakan React, TypeScript, Vite, dan Tailwind CSS
+- `apps/mobile` : aplikasi Flutter Android/iOS/web untuk aktivitas belajar mahasiswa dan pelacak GitHub
 - `packages/shared` : model shared dan contract response yang dipakai bersama antar layer
 
 Secara umum alur aplikasi adalah:
 
-1. User membuka aplikasi Flutter
-2. Flutter memanggil REST API di backend
-3. Express server memvalidasi request, otentikasi user, dan mengakses database melalui Prisma
-4. Prisma menghubungi MySQL
-5. Response dikirim kembali ke mobile app dan diproses UI
+1. Mahasiswa membuka aplikasi Flutter atau dashboard web
+2. Client memanggil REST API di backend
+3. Express memvalidasi request dan mengakses MySQL melalui Prisma
+4. Route tracker mengambil commit dari GitHub hanya setelah endpoint sinkronisasi diminta
+5. Response dikirim kembali ke client dan diproses UI
 
 ---
 
@@ -27,6 +28,10 @@ Secara umum alur aplikasi adalah:
 - Flutter
 - Dart SDK
 - Material Design UI
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
 - `shared_preferences` untuk penyimpanan lokal sederhana
 - `firebase_auth`, `firebase_core`, `cloud_firestore` terdaftar di dependency Flutter, walaupun arsitektur inti saat ini masih berfokus pada API custom dan JWT
 
@@ -133,6 +138,9 @@ Folder `apps/api/src` berisi logic bisnis aplikasi. Server dimulai dari `server.
 - `/api/tasks`
 - `/api/notes`
 - `/api/dashboard`
+- `/api/courses`, `/api/students`, `/api/repositories`
+- `/api/courses/:CourseId/dashboard`
+- `/api/repositories/:Id/sync` dan `/api/courses/:CourseId/sync`
 
 Setiap route dipisahkan berdasarkan domain fitur, lalu middleware seperti auth dan error handler dipakai untuk menjaga konsistensi request/response.
 
@@ -146,10 +154,15 @@ Struktur data utama:
 - `Schedule`
 - `Task`
 - `Note`
+- `Course`
+- `Student`
+- `Repository`
+- `Commit`
 
 Relasi yang digunakan:
 
 - `User` memiliki banyak `Schedule`, `Task`, dan `Note`
+- `Course` memiliki banyak `Student`; `Student` memiliki banyak `Repository`; `Repository` memiliki banyak `Commit`
 - `Task` memiliki banyak `Note`
 - `Note` bisa berelasi ke `Task` dengan `RelatedTaskId`
 - `onDelete: Cascade` untuk `User` dan `Task`

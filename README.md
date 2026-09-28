@@ -1,154 +1,108 @@
 # AppStudyMate
 
-AppStudyMate adalah aplikasi untuk mahasiswa yang menyatukan jadwal kuliah, tugas, deadline, dan catatan belajar. Project ini memakai Flutter untuk mobile serta Express, Prisma, dan MySQL untuk API.
-
-@ -1,2 +1,75 @@
-# AppStudyMate
-1. Problem Statement
-
-Mahasiswa sering mengalami kesulitan dalam mengatur jadwal kuliah, tugas, deadline, dan kegiatan belajar. Informasi tersebut biasanya tersebar di berbagai aplikasi seperti kalender, catatan, dan chat sehingga mudah terlupakan. Dibutuhkan satu aplikasi mobile yang dapat membantu mahasiswa mengatur kegiatan akademik dengan lebih terorganisir.
-
-2. Target User
-
-Target utama:
-
-Mahasiswa
-Pelajar tingkat akhir
-Mahasiswa yang memiliki banyak tugas dan jadwal kuliah
-
-Target sekunder:
-
-Dosen atau admin sebagai pengelola informasi akademik (opsional)
-
-3. App Value
-
-StudyMate memberikan nilai dengan menyediakan satu tempat untuk mengelola aktivitas akademik. Pengguna dapat melihat jadwal, mencatat tugas, mengetahui deadline, membuat catatan, dan memantau progress belajar tanpa harus menggunakan banyak aplikasi.
-
-Value utama:
-
-Jadwal lebih terorganisir
-Tugas lebih mudah dikelola
-Mengurangi risiko lupa deadline
-Catatan belajar tersimpan dalam satu aplikasi
-Progress belajar lebih mudah dipantau
-
-4. Must-Have Features
-
-Fitur yang wajib ada pada versi awal:
-
-Login & Register
-Dashboard
-Class Schedule
-Task Management
-Task Deadline
-Task Status
-Study Notes
-Profile
-Search & Filter
-CRUD data tugas dan jadwal
-
-5. In Scope
-
-Fitur yang akan dikerjakan dalam project:
-
-Registrasi dan login pengguna
-Dashboard mahasiswa
-Menampilkan jadwal kuliah
-Menambah, mengedit, dan menghapus jadwal
-Menampilkan daftar tugas
-Menambah, mengedit, dan menghapus tugas
-Menentukan deadline tugas
-Mengubah status tugas
-Membuat dan mengelola catatan belajar
-Melihat profile pengguna
-Menyimpan data menggunakan database
-Menghubungkan aplikasi mobile dengan REST API
-
-6. Out of Scope
-
-Fitur yang belum termasuk dalam versi project ini:
-
-Video conference
-Chat antar mahasiswa
-Sistem pembayaran
-Integrasi Google Classroom
-Integrasi sistem akademik kampus
-AI tutor
-Marketplace buku
-Sistem ujian online
-Notifikasi WhatsApp
-Fitur untuk mengelola seluruh administrasi kampus
-
-
-
-
-
-
-
+AppStudyMate menyatukan alat belajar mahasiswa dan pelacak repositori GitHub. Workspace ini berisi web React, REST API Express, MySQL dengan Prisma, serta aplikasi Flutter yang sudah ada.
 
 ## Struktur
 
 ```text
 apps/
-	api/       Express REST API dan Prisma
-	mobile/    Flutter
+  api/       Express REST API, Prisma schema, migration, dan seed
+  mobile/    Aplikasi Flutter untuk mahasiswa
+  web/       Dashboard React untuk mahasiswa
 packages/
-	shared/    model, enum, dan response contract bersama
+  shared/    Model dan DTO TypeScript yang dipakai API dan web
+docker-compose.yml
 ```
 
 ## Prasyarat
 
 - Node.js 20 atau lebih baru
 - npm 10 atau lebih baru
-- Flutter SDK 3.22 atau lebih baru
-- MySQL lokal 8 atau lebih baru
+- Docker Desktop dengan Docker Compose
+- Flutter SDK 3.22 atau lebih baru untuk aplikasi mobile
 
 ## Instalasi
 
-1. Siapkan MySQL lokal dan buat database `app_studymate`.
-2. Salin `.env.example` menjadi `.env` di root project dan isi `DATABASE_URL`.
-3. Install dependency API: `npm install`
-4. Buat client dan migration Prisma:
+1. Salin `.env.example` menjadi `.env` di root project.
+
+```powershell
+Copy-Item .env.example .env
+```
+
+2. Jalankan MySQL dengan Docker Compose.
 
 ```bash
+docker compose up -d mysql
+```
+
+3. Install dependency, buat Prisma Client, terapkan migration, dan isi data contoh.
+
+```bash
+npm install
 npm run prisma:generate --workspace @app-studymate/api
-npm run db:migrate --workspace @app-studymate/api -- --name init
+npm run db:migrate
 npm run db:seed
 ```
 
-Seed membuat akun contoh `mahasiswa@example.com` dengan password `password123` dan NIM `20240001`.
+Seed menambahkan satu kelas `Pemrograman Web`, tiga mahasiswa, dan repositori publik contoh. Seed juga mempertahankan data commit yang sudah tersimpan.
 
-## Menjalankan API
+## Menjalankan Web dan API
+
+Jalankan setiap perintah pada terminal terpisah dari root project:
 
 ```bash
 npm run dev:api
 ```
 
-API berjalan pada `http://localhost:4000`. Semua endpoint selain auth membutuhkan header `Authorization: Bearer <JWT>`.
-
-## Menjalankan Flutter di Android dan iOS
-
-Jalankan API terlebih dahulu dengan `npm run dev:api`, lalu jalankan Flutter dari folder `apps/mobile`.
+API berjalan di `http://localhost:4000`.
 
 ```bash
-cd apps/mobile
+npm run dev:web
+```
+
+Web berjalan di `http://localhost:5173`. Dashboard hanya membaca database ketika dibuka. Permintaan ke GitHub baru dilakukan setelah tombol sinkronisasi ditekan.
+
+Build semua workspace:
+
+```bash
+npm run build
+```
+
+## Konfigurasi GitHub
+
+Mahasiswa dapat mengelola kelas, data mahasiswa, dan repositori dari antarmuka tracker. Repositori publik dapat disinkronkan tanpa token. Untuk menaikkan batas permintaan GitHub, isi `GITHUB_TOKEN` di `.env` dengan personal access token yang memiliki akses baca repositori yang diperlukan. Jangan commit file `.env` atau membagikan token.
+
+```dotenv
+GITHUB_TOKEN="github_pat_..."
+```
+
+Saat sinkronisasi, data commit baru disimpan berdasarkan pasangan `RepositoryId` dan `Sha`. Data commit lama tidak ditimpa atau dihapus. Waktu `LastSyncedAt` berubah setelah permintaan sinkronisasi berhasil.
+
+## API Tracker
+
+Endpoint tracker tidak memakai autentikasi pada versi ini. Route autentikasi dan data mahasiswa lama tetap tersedia untuk aplikasi Flutter.
+
+- `GET|POST /api/courses`
+- `GET|PUT|DELETE /api/courses/:Id`
+- `GET|POST /api/courses/:CourseId/students`
+- `GET|PUT|DELETE /api/students/:Id`
+- `GET /api/students/:Id/repositories`
+- `POST /api/students/:Id/repositories`
+- `PUT|DELETE /api/repositories/:Id`
+- `POST /api/repositories/:Id/sync`
+- `POST /api/courses/:CourseId/sync`
+- `GET /api/courses/:CourseId/dashboard`
+- `GET /api/students/:Id/progress`
+
+URL repositori harus memakai format `https://github.com/pemilik/repositori`. Status aktivitas dihitung dari commit terakhir: `ACTIVE` dalam 14 hari terakhir, `INACTIVE` bila lebih lama, dan `NO_COMMIT` bila belum ada commit.
+
+## Aplikasi Flutter
+
+API mahasiswa tetap memakai autentikasi JWT. Jalankan dari folder `apps/mobile`:
+
+```bash
 flutter pub get
 flutter run --dart-define=API_URL=http://10.0.2.2:4000/api
 ```
 
-Android emulator memakai `http://10.0.2.2:4000/api`, iOS simulator memakai `http://localhost:4000/api`, sedangkan perangkat fisik memakai IP komputer di jaringan lokal.
-
-```bash
-flutter run --dart-define=API_URL=http://192.168.1.10:4000/api
-```
-
-## API
-
-- `POST /api/auth/register`, `POST /api/auth/login`
-- `GET|PUT /api/profile`
-- `GET|POST /api/schedules`, `PUT|DELETE /api/schedules/:Id`
-- `GET|POST /api/tasks`, `GET|PUT|DELETE /api/tasks/:Id`, `PATCH /api/tasks/:Id/status`
-- `GET|POST /api/notes`, `GET|PUT|DELETE /api/notes/:Id`
-- `GET /api/dashboard`
-
-Property JSON dan shared model menggunakan PascalCase sesuai spesifikasi. Password di-hash dengan bcrypt dan JWT memakai `JWT_SECRET`. Query data akademik selalu dibatasi user yang sedang login. Relasi catatan ke tugas menggunakan `SetNull`, sehingga menghapus tugas tidak menghapus catatan.
+Pelacak GitHub tersedia setelah mahasiswa masuk ke AppStudyMate. Fitur jadwal, tugas, dan catatan tetap tersedia seperti sebelumnya. Android emulator memakai `10.0.2.2`, iOS simulator memakai `localhost`, dan perangkat fisik memakai alamat IP komputer di jaringan lokal.

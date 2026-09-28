@@ -1,0 +1,1 @@
+enum TrackerSection { dashboard, courses, students, repositories, progress }

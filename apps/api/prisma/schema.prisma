@@ -68,3 +68,59 @@ model Note {
 
   @@index([UserId, UpdatedAt])
 }
+
+model Course {
+  Id        String    @id @default(cuid())
+  Name      String
+  Semester  String
+  Year      Int
+  CreatedAt DateTime  @default(now())
+  Students  Student[]
+}
+
+model Student {
+  Id             String       @id @default(cuid())
+  CourseId       String
+  StudentNumber  String
+  Name           String
+  Email          String
+  GithubUsername String
+  CreatedAt      DateTime     @default(now())
+  Course         Course       @relation(fields: [CourseId], references: [Id], onDelete: Cascade)
+  Repositories   Repository[]
+
+  @@unique([CourseId, StudentNumber])
+  @@index([CourseId, Name])
+}
+
+model Repository {
+  Id             String   @id @default(cuid())
+  StudentId      String
+  Name           String
+  RepositoryUrl  String   @db.VarChar(2048)
+  Owner          String
+  RepositoryName String
+  IsActive       Boolean  @default(true)
+  LastSyncedAt   DateTime?
+  CreatedAt      DateTime @default(now())
+  Student        Student  @relation(fields: [StudentId], references: [Id], onDelete: Cascade)
+  Commits        Commit[]
+
+  @@index([StudentId, IsActive])
+}
+
+model Commit {
+  Id          String     @id @default(cuid())
+  RepositoryId String
+  Sha         String     @db.VarChar(64)
+  Message     String     @db.Text
+  AuthorName  String
+  AuthorEmail String
+  CommittedAt DateTime
+  CommitUrl   String     @db.VarChar(2048)
+  CreatedAt   DateTime   @default(now())
+  Repository  Repository @relation(fields: [RepositoryId], references: [Id], onDelete: Cascade)
+
+  @@unique([RepositoryId, Sha])
+  @@index([RepositoryId, CommittedAt])
+}

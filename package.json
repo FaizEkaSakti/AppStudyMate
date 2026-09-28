@@ -7,8 +7,9 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces",
+    "build": "npm run build --workspace @app-studymate/shared && npm run build --workspace @app-studymate/api && npm run build --workspace @app-studymate/web",
     "dev:api": "npm run dev --workspace @app-studymate/api",
+    "dev:web": "npm run dev --workspace @app-studymate/web",
     "db:migrate": "npm run prisma:migrate --workspace @app-studymate/api",
     "db:seed": "npm run prisma:seed --workspace @app-studymate/api"
   },
