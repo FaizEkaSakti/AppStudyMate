@@ -9,7 +9,6 @@ import { scheduleRouter } from "./routes/schedules.js";
 import { taskRouter } from "./routes/tasks.js";
 import { noteRouter } from "./routes/notes.js";
 import { dashboardRouter } from "./routes/dashboard.js";
-import { trackerRouter } from "./routes/tracker.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 
 dotenv.config({ path: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../.env") });
@@ -23,7 +22,6 @@ app.use("/api/schedules", scheduleRouter);
 app.use("/api/tasks", taskRouter);
 app.use("/api/notes", noteRouter);
 app.use("/api/dashboard", dashboardRouter);
-app.use("/api", trackerRouter);
 app.use(errorHandler);
 
 const port = Number(process.env.API_PORT ?? 4000);

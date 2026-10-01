@@ -1,6 +1,6 @@
 # AppStudyMate
 
-AppStudyMate menyatukan alat belajar mahasiswa dan pelacak repositori GitHub. Workspace ini berisi web React, REST API Express, MySQL dengan Prisma, serta aplikasi Flutter yang sudah ada.
+AppStudyMate membantu mahasiswa mengatur jadwal kuliah, tugas, deadline, dan catatan belajar. Workspace ini berisi REST API Express, MySQL dengan Prisma, serta aplikasi Flutter.
 
 ## Struktur
 
@@ -8,9 +8,8 @@ AppStudyMate menyatukan alat belajar mahasiswa dan pelacak repositori GitHub. Wo
 apps/
   api/       Express REST API, Prisma schema, migration, dan seed
   mobile/    Aplikasi Flutter untuk mahasiswa
-  web/       Dashboard React untuk mahasiswa
 packages/
-  shared/    Model dan DTO TypeScript yang dipakai API dan web
+  shared/    Model dan DTO TypeScript yang dipakai API
 docker-compose.yml
 ```
 
