@@ -108,14 +108,16 @@ class ApiClient {
       localUser = localUsers.isEmpty ? null : localUsers.last;
     }
     final savedUser = preferences.getString('local_user');
-    if (savedUser != null)
+    if (savedUser != null) {
       localUser = jsonDecode(savedUser) as Map<String, dynamic>;
+    }
     for (final type in localData.keys) {
       final savedItems = preferences.getString(type);
-      if (savedItems != null)
+      if (savedItems != null) {
         localData[type] = (jsonDecode(savedItems) as List)
             .map((item) => Map<String, dynamic>.from(item as Map))
             .toList();
+      }
     }
   }
 
@@ -129,8 +131,9 @@ class ApiClient {
       final userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
       final user = userCredential.user;
-      if (user == null)
+      if (user == null) {
         throw Exception('Firebase tidak mengembalikan user setelah login');
+      }
       final profile = await _findProfile(user, email);
       return {
         'Token': await user.getIdToken() ?? '',
@@ -149,9 +152,10 @@ class ApiClient {
       final userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
       final user = userCredential.user;
-      if (user == null)
+      if (user == null) {
         throw Exception(
             'Firebase tidak mengembalikan user setelah pendaftaran');
+      }
       final name = (body['Name'] as String? ?? 'User').trim();
       final nim = (body['Nim'] as String? ?? '').trim();
       await user.updateDisplayName(name);
@@ -278,8 +282,9 @@ class ApiClient {
       {Map<String, dynamic>? body}) async {
     if (path == '/auth/register') {
       final email = body?['Email']?.toString().trim().toLowerCase() ?? '';
-      if (localUsers.any((account) => account['Email'] == email))
+      if (localUsers.any((account) => account['Email'] == email)) {
         throw Exception('Email sudah terdaftar');
+      }
       localUser = {
         'Id': 'local-user',
         'Name': body?['Name'] ?? '',
@@ -348,8 +353,9 @@ class _SessionGateState extends State<SessionGate> {
       final preferences = await SharedPreferences.getInstance();
       if (client.firebaseReady) {
         user = await client.firebaseUser();
-        if (user!.isNotEmpty)
+        if (user!.isNotEmpty) {
           client.token = await FirebaseAuth.instance.currentUser?.getIdToken();
+        }
       } else if (!client.firebaseReady && client.localUser != null) {
         client.token = 'local-token';
         user = client.localUser;
@@ -385,8 +391,9 @@ class _SessionGateState extends State<SessionGate> {
 
   @override
   Widget build(BuildContext context) {
-    if (loading)
+    if (loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     if (startupError != null) {
       return Scaffold(
         body: Center(
@@ -464,9 +471,10 @@ class _LoginPageState extends State<LoginPage> {
       await widget.onLogin(
           email.text, password.text, register, name.text, nim.text);
     } catch (exception) {
-      if (mounted)
+      if (mounted) {
         setState(
             () => error = exception.toString().replaceFirst('Exception: ', ''));
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -768,8 +776,9 @@ class _DataListState extends State<DataList> {
   Widget build(BuildContext context) => FutureBuilder<List<dynamic>>(
       future: future,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
+        }
         final items = snapshot.data ?? [];
         return Stack(children: [
           ListView(
@@ -894,8 +903,9 @@ class _ItemFormState extends State<ItemForm> {
   }
 
   void submit() {
-    if (fields.values.any((controller) => controller.text.trim().isEmpty))
+    if (fields.values.any((controller) => controller.text.trim().isEmpty)) {
       return;
+    }
     final item = {
       for (final entry in fields.entries) entry.key: entry.value.text.trim(),
       'Id': widget.item?['Id'] ??
@@ -1136,7 +1146,9 @@ class _TrackerPageState extends State<TrackerPage> {
     try {
       if (value == TrackerSection.dashboard) await _loadDashboard();
       if (value == TrackerSection.students ||
-          value == TrackerSection.repositories) await _loadStudents();
+          value == TrackerSection.repositories) {
+        await _loadStudents();
+      }
       if (value == TrackerSection.repositories) await _loadRepositories();
     } catch (exception) {
       error = _message(exception);
@@ -1279,8 +1291,9 @@ class _TrackerPageState extends State<TrackerPage> {
           results.where((item) => !item.containsKey('NewCommitCount')).toList();
       notice =
           '${result['SyncedRepositoryCount'] ?? 0} repositori selesai disinkronkan.';
-      if (failures.isNotEmpty)
+      if (failures.isNotEmpty) {
         error = failures.map((item) => item['Message']).join('\n');
+      }
       await _loadDashboard();
     } catch (exception) {
       error = _message(exception);
@@ -1549,9 +1562,10 @@ class _TrackerPageState extends State<TrackerPage> {
                 trailing: PopupMenuButton<String>(
                   onSelected: (action) {
                     if (action == 'edit') _editCourse(course);
-                    if (action == 'delete')
+                    if (action == 'delete') {
                       _delete(
                           '/courses/${course['Id']}', 'kelas', _loadCourses);
+                    }
                   },
                   itemBuilder: (_) => const [
                     PopupMenuItem(value: 'edit', child: Text('Ubah')),
@@ -1599,9 +1613,10 @@ class _TrackerPageState extends State<TrackerPage> {
                       selectedStudentId = student['Id'].toString();
                       _changeSection(TrackerSection.repositories);
                     }
-                    if (action == 'delete')
+                    if (action == 'delete') {
                       _delete('/students/${student['Id']}', 'mahasiswa',
                           _loadStudents);
+                    }
                   },
                   itemBuilder: (_) => const [
                     PopupMenuItem(
@@ -1678,9 +1693,10 @@ class _TrackerPageState extends State<TrackerPage> {
                   onSelected: (action) {
                     if (action == 'sync') _syncRepository(repository);
                     if (action == 'edit') _editRepository(repository);
-                    if (action == 'delete')
+                    if (action == 'delete') {
                       _delete('/repositories/${repository['Id']}', 'repositori',
                           _loadRepositories);
+                    }
                   },
                   itemBuilder: (_) => const [
                     PopupMenuItem(
@@ -1710,9 +1726,10 @@ class _TrackerPageState extends State<TrackerPage> {
       );
 
   Widget _progressSection() {
-    if (progress == null)
+    if (progress == null) {
       return _empty('Progres tidak tersedia',
           'Pilih mahasiswa dari daftar untuk membuka detail.');
+    }
     final student = _map(progress?['Student']);
     final repos = _maps(progress?['Repositories']);
     return ListView(
@@ -1867,15 +1884,19 @@ class _TrackerFormDialogState extends State<TrackerFormDialog> {
                               : TextInputType.text,
                       decoration: InputDecoration(labelText: field.value),
                       validator: (value) {
-                        if (value == null || value.trim().isEmpty)
+                        if (value == null || value.trim().isEmpty) {
                           return 'Bagian ini wajib diisi.';
-                        if (field.key == 'Email' && !value.contains('@'))
+                        }
+                        if (field.key == 'Email' && !value.contains('@')) {
                           return 'Masukkan alamat email yang valid.';
-                        if (field.key == 'Year' && int.tryParse(value) == null)
+                        }
+                        if (field.key == 'Year' && int.tryParse(value) == null) {
                           return 'Masukkan tahun yang valid.';
+                        }
                         if (field.key == 'RepositoryUrl' &&
-                            !value.startsWith('https://github.com/'))
+                            !value.startsWith('https://github.com/')) {
                           return 'Gunakan URL GitHub yang valid.';
+                        }
                         return null;
                       },
                     ),
@@ -1901,8 +1922,9 @@ class _TrackerFormDialogState extends State<TrackerFormDialog> {
                 for (final entry in controllers.entries)
                   entry.key: entry.value.text.trim(),
               };
-              if (result.containsKey('Year'))
+              if (result.containsKey('Year')) {
                 result['Year'] = int.parse(result['Year'] as String);
+              }
               if (widget.activeToggle) result['IsActive'] = active;
               Navigator.pop(context, result);
             },
