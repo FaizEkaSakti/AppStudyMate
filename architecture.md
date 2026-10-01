@@ -4,7 +4,7 @@ Dokumen ini menjelaskan arsitektur, komponen utama, dan teknologi yang digunakan
 
 ## 1. Ringkasan Arsitektur
 
-Project ini menggunakan pendekatan monorepo dengan dua area utama:
+Project ini menggunakan pendekatan monorepo dengan dua aplikasi utama dan satu package shared:
 
 - `apps/api` : backend REST API menggunakan Node.js + Express + TypeScript
 - `apps/mobile` : aplikasi Flutter Android/iOS/web untuk aktivitas belajar mahasiswa
