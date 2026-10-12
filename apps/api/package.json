@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "test": "tsx --test src/routes/*.test.ts",
     "dev": "tsx watch src/server.ts",
     "start": "node dist/server.js",
     "prisma:migrate": "prisma migrate dev",

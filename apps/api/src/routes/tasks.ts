@@ -7,7 +7,7 @@ import { mapTask } from "../utils/mapping.js";
 
 export const taskRouter = Router();
 taskRouter.use(requireAuth);
-const taskSchema = z.object({ Title: z.string().min(1), Description: z.string().default(""), Deadline: z.coerce.date(), Status: z.nativeEnum(TaskStatus).default(TaskStatus.TODO) });
+export const taskSchema = z.object({ Title: z.string().trim().min(1), Description: z.string().default(""), Deadline: z.coerce.date(), Status: z.nativeEnum(TaskStatus).default(TaskStatus.TODO) });
 taskRouter.get("/", async (request, response, next) => { try { const { Search, Status, From, To } = request.query; const rows = await prisma.task.findMany({ where: { UserId: request.UserId, Status: Status ? String(Status) as TaskStatus : undefined, Title: Search ? { contains: String(Search) } : undefined, Deadline: From || To ? { gte: From ? new Date(String(From)) : undefined, lte: To ? new Date(String(To)) : undefined } : undefined }, orderBy: { Deadline: "asc" } }); response.json(rows.map(mapTask)); } catch (error) { next(error); } });
 taskRouter.post("/", async (request, response, next) => { try { const row = await prisma.task.create({ data: { ...taskSchema.parse(request.body), UserId: request.UserId! } }); response.status(201).json(mapTask(row)); } catch (error) { next(error); } });
 taskRouter.get("/:Id", async (request, response, next) => { try { const row = await prisma.task.findFirst({ where: { Id: request.params.Id, UserId: request.UserId } }); if (!row) { response.status(404).json({ Message: "Tugas tidak ditemukan" }); return; } response.json(mapTask(row)); } catch (error) { next(error); } });
