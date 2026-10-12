@@ -6,8 +6,8 @@ import { prisma } from "../lib/prisma.js";
 import { mapUser } from "../utils/mapping.js";
 
 export const authRouter = Router();
-const registerSchema = z.object({ Name: z.string().min(2), Email: z.string().email(), Nim: z.string().min(3), Password: z.string().min(6) });
-const loginSchema = z.object({ Email: z.string().email(), Password: z.string().min(1) });
+export const registerSchema = z.object({ Name: z.string().trim().min(2), Email: z.string().trim().toLowerCase().email(), Nim: z.string().trim().min(3), Password: z.string().min(6) });
+export const loginSchema = z.object({ Email: z.string().trim().toLowerCase().email(), Password: z.string().min(1) });
 const tokenFor = (UserId: string) => jwt.sign({ UserId }, process.env.JWT_SECRET ?? "development-secret", { expiresIn: "7d" });
 
 authRouter.post("/register", async (request, response, next) => {

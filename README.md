@@ -13,6 +13,16 @@ packages/
 docker-compose.yml
 ```
 
+## MVP Version 1: User Stories dan Acceptance Criteria
+
+1. **Kelola tugas.** Mahasiswa dapat menyimpan tugas dengan judul, deadline, deskripsi, dan status. Judul wajib berisi teks setelah spasi tepi dihapus, deadline harus valid, dan status awal adalah `TODO`.
+2. **Kelola jadwal kuliah.** Mahasiswa dapat mencatat mata kuliah, dosen, hari, ruangan, serta rentang waktu. Field wajib tidak boleh kosong, format jam adalah `HH:mm`, dan jam selesai harus setelah jam mulai.
+3. **Buat catatan belajar.** Mahasiswa dapat menyimpan judul dan isi catatan yang tidak kosong. Catatan boleh terkait tugas, tetapi tugas tersebut harus dimiliki oleh pengguna yang sama.
+4. **Daftar dan masuk akun.** Mahasiswa mengirim nama, NIM, email, dan password; nama/NIM dirapikan dan email disimpan dalam huruf kecil. Input tidak memenuhi batas minimum atau format email ditolak.
+5. **Pantau dashboard.** Dashboard menghitung tugas selesai, pending, dan overdue secara terpisah; hanya jadwal hari ini yang ditampilkan; tugas mendatang yang belum selesai diurutkan berdasarkan deadline dan dibatasi lima item dalam 14 hari.
+
+Jalankan seluruh unit test API dengan `npm test --workspace @app-studymate/api`.
+
 # AppStudyMate
 1. Problem Statement
 
@@ -92,6 +102,9 @@ Fitur untuk mengelola seluruh administrasi kampus
 
 Tugas p4
 https://docs.google.com/document/d/12iTj2jHD9Vm1ASM3gxiXem6WuGD5KjhBmpEdluKWdXY/edit?usp=sharing
+
+Tugas p5
+https://docs.google.com/document/d/1_st2LbMxO7IKU-AG6hhNTBw-i3JJN4Uv8RTMV2sd-DI/edit?usp=sharing
 
 
 
