@@ -24,3 +24,16 @@ test("task input rejects blank titles, invalid deadlines, and statuses", () => {
   assert.equal(taskSchema.safeParse({ ...validTask, Deadline: "bukan tanggal" }).success, false);
   assert.equal(taskSchema.safeParse({ ...validTask, Status: "BLOCKED" }).success, false);
 });
+
+test("task input accepts each supported workflow status and parses its deadline", () => {
+  for (const Status of [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE]) {
+    const task = taskSchema.parse({
+      Title: "Kumpulkan laporan",
+      Deadline: "2026-10-20T00:00:00.000Z",
+      Status,
+    });
+
+    assert.equal(task.Status, Status);
+    assert.ok(task.Deadline instanceof Date);
+  }
+});
