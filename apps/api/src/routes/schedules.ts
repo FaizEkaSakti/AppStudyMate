@@ -6,7 +6,18 @@ import { mapSchedule } from "../utils/mapping.js";
 
 export const scheduleRouter = Router();
 scheduleRouter.use(requireAuth);
-const scheduleSchema = z.object({ CourseName: z.string().min(1), Lecturer: z.string().min(1), Day: z.string().min(1), StartTime: z.string(), EndTime: z.string(), Room: z.string().min(1) });
+const scheduleTimeSchema = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/);
+export const scheduleSchema = z.object({
+  CourseName: z.string().trim().min(1),
+  Lecturer: z.string().trim().min(1),
+  Day: z.string().trim().min(1),
+  StartTime: scheduleTimeSchema,
+  EndTime: scheduleTimeSchema,
+  Room: z.string().trim().min(1),
+}).refine(({ StartTime, EndTime }) => StartTime < EndTime, {
+  path: ["EndTime"],
+  message: "Jam selesai harus setelah jam mulai",
+});
 scheduleRouter.get("/", async (request, response, next) => { try { const rows = await prisma.schedule.findMany({ where: { UserId: request.UserId }, orderBy: [{ Day: "asc" }, { StartTime: "asc" }] }); response.json(rows.map(mapSchedule)); } catch (error) { next(error); } });
 scheduleRouter.post("/", async (request, response, next) => { try { const row = await prisma.schedule.create({ data: { ...scheduleSchema.parse(request.body), UserId: request.UserId! } }); response.status(201).json(mapSchedule(row)); } catch (error) { next(error); } });
 scheduleRouter.put("/:Id", async (request, response, next) => { try { const row = await prisma.schedule.updateMany({ where: { Id: request.params.Id, UserId: request.UserId }, data: scheduleSchema.parse(request.body) }); if (!row.count) { response.status(404).json({ Message: "Jadwal tidak ditemukan" }); return; } const result = await prisma.schedule.findUniqueOrThrow({ where: { Id: request.params.Id } }); response.json(mapSchedule(result)); } catch (error) { next(error); } });
