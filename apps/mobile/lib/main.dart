@@ -5,10 +5,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'theme/app_theme.dart';
 
+const apiUrl = String.fromEnvironment('API_URL');
 const firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY',
     defaultValue: 'AIzaSyBsTO332dtvoRfqy321FASqDhTeFzUD6Xc');
 const firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID',
@@ -37,6 +39,12 @@ class StudyMateApp extends StatelessWidget {
 }
 
 class ApiClient {
+  ApiClient({http.Client? httpClient, String? apiBaseUrl})
+      : _httpClient = httpClient ?? http.Client(),
+        _apiBaseUrl = apiBaseUrl ?? apiUrl;
+
+  final http.Client _httpClient;
+  final String _apiBaseUrl;
   String? token;
   Map<String, dynamic>? localUser;
   List<Map<String, dynamic>> localUsers = [];
@@ -46,11 +54,13 @@ class ApiClient {
     'tasks': [],
     'notes': [],
   };
+  bool get apiEnabled => _apiBaseUrl.trim().isNotEmpty;
   bool get firebaseConfigProvided =>
       firebaseApiKey.isNotEmpty ||
       firebaseAppId.isNotEmpty ||
       firebaseProjectId.isNotEmpty;
   bool get firebaseReady =>
+      !apiEnabled &&
       !firebaseDisabled &&
       kIsWeb &&
       firebaseApiKey.startsWith('AIza') &&
@@ -60,6 +70,7 @@ class ApiClient {
       !firebaseProjectId.contains('nama-project');
 
   Future<void> init() async {
+    if (apiEnabled) return;
     if (!firebaseConfigProvided) {
       await _loadLocalData();
       return;
@@ -111,6 +122,7 @@ class ApiClient {
 
   Future<dynamic> request(String path,
       {String method = 'GET', Map<String, dynamic>? body}) async {
+    if (apiEnabled) return _apiRequest(path, method: method, body: body);
     if (!firebaseReady) return localRequest(path, body: body);
 
     if (path == '/auth/login') {
@@ -192,6 +204,36 @@ class ApiClient {
     throw Exception('Endpoint tidak tersedia');
   }
 
+  Future<dynamic> _apiRequest(String path,
+      {required String method, Map<String, dynamic>? body}) async {
+    final configuredApiUrl = _apiBaseUrl.trim();
+    final baseUrl = configuredApiUrl.endsWith('/')
+        ? configuredApiUrl
+        : '$configuredApiUrl/';
+    final endpoint = Uri.parse(baseUrl)
+        .resolve(path.startsWith('/') ? path.substring(1) : path);
+    final headers = <String, String>{'Accept': 'application/json'};
+    if (body != null) headers['Content-Type'] = 'application/json';
+    if (token != null && !path.startsWith('/auth/')) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    final response = await _httpClient
+        .send(http.Request(method, endpoint)
+          ..headers.addAll(headers)
+          ..body = body == null ? '' : jsonEncode(body))
+        .then(http.Response.fromStream)
+        .timeout(const Duration(seconds: 15));
+    final result = response.body.isEmpty ? null : jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final message =
+          result is Map<String, dynamic> ? result['Message']?.toString() : null;
+      throw Exception(
+          message ?? 'Permintaan API gagal (HTTP ${response.statusCode})');
+    }
+    return result;
+  }
+
   Future<Map<String, dynamic>> firebaseUser() async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return {};
@@ -219,6 +261,10 @@ class ApiClient {
   }
 
   Future<List<dynamic>> list(String path) async {
+    if (apiEnabled) {
+      final result = await request(path);
+      return result as List<dynamic>;
+    }
     final type = path.replaceFirst('/', '');
     if (!firebaseReady) return localData[type] ?? [];
     final userId = FirebaseAuth.instance.currentUser?.uid;
@@ -232,7 +278,15 @@ class ApiClient {
         .toList();
   }
 
-  Future<void> saveItem(String type, Map<String, dynamic> item) async {
+  Future<void> saveItem(String type, Map<String, dynamic> item,
+      {bool isNew = false}) async {
+    if (apiEnabled) {
+      final body = Map<String, dynamic>.from(item)..remove('Id');
+      final path =
+          '/$type${isNew ? '' : '/${Uri.encodeComponent(item['Id'].toString())}'}';
+      await request(path, method: isNew ? 'POST' : 'PUT', body: body);
+      return;
+    }
     if (!firebaseReady) {
       final items = localData[type]!;
       final index = items.indexWhere((entry) => entry['Id'] == item['Id']);
@@ -253,6 +307,10 @@ class ApiClient {
   }
 
   Future<void> deleteItem(String type, String id) async {
+    if (apiEnabled) {
+      await request('/$type/${Uri.encodeComponent(id)}', method: 'DELETE');
+      return;
+    }
     if (!firebaseReady) {
       localData[type]!.removeWhere((item) => item['Id'] == id);
       await _persistLocal(type);
@@ -344,6 +402,13 @@ class _SessionGateState extends State<SessionGate> {
         if (user!.isNotEmpty) {
           client.token = await FirebaseAuth.instance.currentUser?.getIdToken();
         }
+      } else if (client.apiEnabled) {
+        final token = preferences.getString('api_token');
+        final savedUser = preferences.getString('api_user');
+        if (token != null && savedUser != null) {
+          client.token = token;
+          user = jsonDecode(savedUser) as Map<String, dynamic>;
+        }
       } else if (!client.firebaseReady && client.localUser != null) {
         client.token = 'local-token';
         user = client.localUser;
@@ -372,8 +437,10 @@ class _SessionGateState extends State<SessionGate> {
     client.token = result['Token'] as String;
     user = result['User'] as Map<String, dynamic>;
     final preferences = await SharedPreferences.getInstance();
-    await preferences.setString('token', client.token!);
-    await preferences.setString('user', jsonEncode(user));
+    final tokenKey = client.apiEnabled ? 'api_token' : 'token';
+    final userKey = client.apiEnabled ? 'api_user' : 'user';
+    await preferences.setString(tokenKey, client.token!);
+    await preferences.setString(userKey, jsonEncode(user));
     if (mounted) setState(() {});
   }
 
@@ -424,6 +491,8 @@ class _SessionGateState extends State<SessionGate> {
             final preferences = await SharedPreferences.getInstance();
             await preferences.remove('token');
             await preferences.remove('user');
+            await preferences.remove('api_token');
+            await preferences.remove('api_user');
             await preferences.remove('local_user');
             client.localUser = null;
           }
@@ -580,13 +649,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int tab = 0;
-  final titles = const [
-    'Dashboard',
-    'Jadwal',
-    'Tugas',
-    'Catatan',
-    'Profil'
-  ];
+  final titles = const ['Dashboard', 'Jadwal', 'Tugas', 'Catatan', 'Profil'];
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -722,7 +785,12 @@ class _DataListState extends State<DataList> {
       builder: (_) => ItemForm(type: widget.type, item: item),
     );
     if (result == null) return;
-    await widget.client.saveItem(widget.type, result);
+    try {
+      await widget.client.saveItem(widget.type, result, isNew: item == null);
+    } on Exception catch (error) {
+      if (mounted) _showError(error);
+      return;
+    }
     if (mounted) setState(_reload);
   }
 
@@ -743,8 +811,20 @@ class _DataListState extends State<DataList> {
       ),
     );
     if (confirmed != true) return;
-    await widget.client.deleteItem(widget.type, id);
+    try {
+      await widget.client.deleteItem(widget.type, id);
+    } on Exception catch (error) {
+      if (mounted) _showError(error);
+      return;
+    }
     if (mounted) setState(_reload);
+  }
+
+  void _showError(Exception error) {
+    final message = error.toString().replaceFirst('Exception: ', '').trim();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message.isEmpty ? 'Permintaan gagal. Coba lagi.' : message),
+    ));
   }
 
   Future<void> _showDetails(Map<String, dynamic> item) async {
@@ -802,6 +882,26 @@ class _DataListState extends State<DataList> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                      'Data gagal dimuat. Periksa koneksi API lalu coba lagi.',
+                      textAlign: TextAlign.center),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () => setState(_reload),
+                    child: const Text('Coba lagi'),
+                  ),
+                ],
+              ),
+            ),
+          );
         }
         final items = snapshot.data ?? [];
         return Stack(children: [
