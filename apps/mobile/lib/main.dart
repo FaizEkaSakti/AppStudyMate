@@ -712,7 +712,9 @@ class _DataListState extends State<DataList> {
     _reload();
   }
 
-  void _reload() => future = widget.client.list('/${widget.type}');
+  void _reload() {
+    future = widget.client.list('/${widget.type}');
+  }
 
   Future<void> _edit([Map<String, dynamic>? item]) async {
     final result = await showDialog<Map<String, dynamic>>(
@@ -743,6 +745,55 @@ class _DataListState extends State<DataList> {
     if (confirmed != true) return;
     await widget.client.deleteItem(widget.type, id);
     if (mounted) setState(_reload);
+  }
+
+  Future<void> _showDetails(Map<String, dynamic> item) async {
+    final isTask = widget.type == 'tasks';
+    final title = item[isTask ? 'Title' : 'CourseName']?.toString() ?? '';
+    final details = isTask
+        ? <(String, String)>[
+            ('Deadline', formatDate(item['Deadline'])),
+            ('Status', statusLabel(item['Status'])),
+            ('Deskripsi', item['Description']?.toString() ?? '-'),
+          ]
+        : <(String, String)>[
+            ('Dosen', item['Lecturer']?.toString() ?? '-'),
+            ('Hari', item['Day']?.toString() ?? '-'),
+            (
+              'Waktu',
+              '${item['StartTime'] ?? '-'} - ${item['EndTime'] ?? '-'}'
+            ),
+            ('Ruangan', item['Room']?.toString() ?? '-'),
+          ];
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isTask ? 'Detail tugas' : 'Detail jadwal'),
+        content: SizedBox(
+          width: 380,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        color: ink, fontSize: 18, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 16),
+                for (final detail in details)
+                  _DetailRow(label: detail.$1, value: detail.$2),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Tutup')),
+        ],
+      ),
+    );
   }
 
   @override
@@ -780,6 +831,10 @@ class _DataListState extends State<DataList> {
                                 color: ink, fontWeight: FontWeight.w700)),
                         subtitle: Text(detail.toString(),
                             maxLines: 3, overflow: TextOverflow.ellipsis),
+                        onTap:
+                            widget.type == 'tasks' || widget.type == 'schedules'
+                                ? () => _showDetails(data)
+                                : null,
                         leading: Icon(
                             widget.type == 'tasks'
                                 ? Icons.check_circle_outline
@@ -788,12 +843,25 @@ class _DataListState extends State<DataList> {
                                     : Icons.schedule,
                             color: teal),
                         trailing: PopupMenuButton<String>(
-                          onSelected: (action) => action == 'edit'
-                              ? _edit(data)
-                              : _delete(data['Id'].toString()),
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(value: 'edit', child: Text('Edit')),
-                            PopupMenuItem(value: 'delete', child: Text('Hapus'))
+                          onSelected: (action) {
+                            if (action == 'details') {
+                              _showDetails(data);
+                            } else if (action == 'edit') {
+                              _edit(data);
+                            } else {
+                              _delete(data['Id'].toString());
+                            }
+                          },
+                          itemBuilder: (_) => [
+                            if (widget.type == 'tasks' ||
+                                widget.type == 'schedules')
+                              const PopupMenuItem(
+                                  value: 'details',
+                                  child: Text('Lihat detail')),
+                            const PopupMenuItem(
+                                value: 'edit', child: Text('Edit')),
+                            const PopupMenuItem(
+                                value: 'delete', child: Text('Hapus')),
                           ],
                         ),
                       ));
@@ -813,6 +881,28 @@ class _DataListState extends State<DataList> {
                           : 'Catatan'))),
         ]);
       });
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                style: const TextStyle(
+                    color: muted, fontSize: 12, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 3),
+            Text(value, style: const TextStyle(color: ink, fontSize: 15)),
+          ],
+        ),
+      );
 }
 
 String formatDate(dynamic value) {
@@ -991,4 +1081,3 @@ class Profile extends StatelessWidget {
             label: const Text('Keluar'))
       ]);
 }
-

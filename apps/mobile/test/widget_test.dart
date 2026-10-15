@@ -6,6 +6,8 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:app_studymate_mobile/main.dart';
 
@@ -13,5 +15,86 @@ void main() {
   testWidgets('StudyMate app starts', (WidgetTester tester) async {
     await tester.pumpWidget(const StudyMateApp());
     expect(find.byType(StudyMateApp), findsOneWidget);
+  });
+
+  testWidgets('tapping a task opens its detail popup',
+      (WidgetTester tester) async {
+    final client = ApiClient();
+    client.localData['tasks']!.add({
+      'Id': 'task-1',
+      'Title': 'Kumpulkan laporan',
+      'Description': 'Bab satu dan dua',
+      'Deadline': '2026-10-20T00:00:00.000Z',
+      'Status': 'IN_PROGRESS',
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: DataList(client: client, type: 'tasks')),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kumpulkan laporan'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Detail tugas'), findsOneWidget);
+    expect(find.text('20/10/2026'), findsOneWidget);
+    expect(find.text('Dikerjakan'), findsOneWidget);
+    expect(find.text('Bab satu dan dua'), findsOneWidget);
+  });
+
+  testWidgets('schedule popup menu opens schedule details',
+      (WidgetTester tester) async {
+    final client = ApiClient();
+    client.localData['schedules']!.add({
+      'Id': 'schedule-1',
+      'CourseName': 'Pemrograman',
+      'Lecturer': 'Ibu Ani',
+      'Day': 'Senin',
+      'StartTime': '08:00',
+      'EndTime': '09:30',
+      'Room': 'Lab 1',
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: DataList(client: client, type: 'schedules')),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Lihat detail'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Detail jadwal'), findsOneWidget);
+    expect(find.text('Pemrograman'), findsNWidgets(2));
+    expect(find.text('Ibu Ani'), findsOneWidget);
+    expect(find.text('Senin'), findsOneWidget);
+    expect(find.text('08:00 - 09:30'), findsOneWidget);
+    expect(find.text('Lab 1'), findsOneWidget);
+  });
+
+  testWidgets('saving an edited task refreshes the list synchronously',
+      (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final client = ApiClient();
+    client.localData['tasks']!.add({
+      'Id': 'task-1',
+      'Title': 'Tugas lama',
+      'Description': 'Deskripsi',
+      'Deadline': '2026-10-20T00:00:00.000Z',
+      'Status': 'TODO',
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: DataList(client: client, type: 'tasks')),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(PopupMenuButton<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'Tugas baru');
+    await tester.tap(find.text('Simpan'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tugas baru'), findsOneWidget);
   });
 }
