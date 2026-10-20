@@ -21,7 +21,20 @@ docker-compose.yml
 4. **Daftar dan masuk akun.** Mahasiswa mengirim nama, NIM, email, dan password; nama/NIM dirapikan dan email disimpan dalam huruf kecil. Input tidak memenuhi batas minimum atau format email ditolak.
 5. **Pantau dashboard.** Dashboard menghitung tugas selesai, pending, dan overdue secara terpisah; hanya jadwal hari ini yang ditampilkan; tugas mendatang yang belum selesai diurutkan berdasarkan deadline dan dibatasi lima item dalam 14 hari.
 
-Jalankan seluruh unit test API dengan `npm test --workspace @app-studymate/api`.
+## Unit tests
+
+Test aturan bisnis MVP API berada di `apps/api/src/routes/`:
+`auth.test.ts`, `tasks.test.ts`, `schedules.test.ts`, `notes.test.ts`, dan
+`dashboard.test.ts`. Test mobile berada di `apps/mobile/test/`, termasuk
+`dashboard_data_test.dart`.
+
+Jalankan semua unit test dari root repository:
+
+```sh
+npm test --workspace @app-studymate/api
+cd apps/mobile
+flutter test
+```
 
 # AppStudyMate
 1. Problem Statement
@@ -105,7 +118,6 @@ https://docs.google.com/document/d/12iTj2jHD9Vm1ASM3gxiXem6WuGD5KjhBmpEdluKWdXY/
 
 Tugas p5
 https://docs.google.com/document/d/1_st2LbMxO7IKU-AG6hhNTBw-i3JJN4Uv8RTMV2sd-DI/edit?usp=sharing
-
 
 
 
