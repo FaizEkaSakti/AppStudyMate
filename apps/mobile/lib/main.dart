@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'dashboard_data.dart';
 import 'theme/app_theme.dart';
 
 const apiUrl = String.fromEnvironment('API_URL');
@@ -187,19 +188,16 @@ class ApiClient {
           .collection('notes')
           .where('UserId', isEqualTo: userId)
           .get();
-      final completed = tasks.docs
-          .where((document) => document.data()['Status'] == 'DONE')
-          .length;
-      return {
-        'Summary': {
-          'TotalTasks': tasks.size,
-          'TotalCompletedTasks': completed,
-          'TotalPendingTasks': tasks.size - completed,
-          'TotalOverdueTasks': 0,
-          'TotalSchedulesToday': schedules.size,
-          'TotalNotes': notes.size
-        }
-      };
+      return buildMobileDashboard(
+        tasks: tasks.docs
+            .map((document) => {'Id': document.id, ...document.data()})
+            .toList(),
+        schedules: schedules.docs
+            .map((document) => {'Id': document.id, ...document.data()})
+            .toList(),
+        totalNotes: notes.size,
+        now: DateTime.now(),
+      );
     }
     throw Exception('Endpoint tidak tersedia');
   }
@@ -357,18 +355,12 @@ class ApiClient {
       return {'Token': 'local-token', 'User': localUser};
     }
     if (path == '/dashboard') {
-      final tasks = localData['tasks']!;
-      final completed = tasks.where((item) => item['Status'] == 'DONE').length;
-      return {
-        'Summary': {
-          'TotalTasks': tasks.length,
-          'TotalCompletedTasks': completed,
-          'TotalPendingTasks': tasks.length - completed,
-          'TotalOverdueTasks': 0,
-          'TotalSchedulesToday': localData['schedules']!.length,
-          'TotalNotes': localData['notes']!.length
-        }
-      };
+      return buildMobileDashboard(
+        tasks: localData['tasks']!,
+        schedules: localData['schedules']!,
+        totalNotes: localData['notes']!.length,
+        now: DateTime.now(),
+      );
     }
     throw Exception('Data belum tersedia');
   }
@@ -705,6 +697,10 @@ class Dashboard extends StatelessWidget {
           ('Pending', summary['TotalPendingTasks'] ?? 0),
           ('Terlambat', summary['TotalOverdueTasks'] ?? 0)
         ];
+        final todaySchedules =
+            snapshot.data?['TodaySchedules'] as List<dynamic>? ?? [];
+        final upcomingTasks =
+            snapshot.data?['UpcomingTasks'] as List<dynamic>? ?? [];
         return ListView(padding: const EdgeInsets.all(24), children: [
           const Text('APPSTUDYMATE',
               style: TextStyle(
@@ -754,6 +750,43 @@ class Dashboard extends StatelessWidget {
             const Padding(
                 padding: EdgeInsets.only(top: 24),
                 child: Center(child: CircularProgressIndicator())),
+          if (snapshot.hasData) ...[
+            const SizedBox(height: 24),
+            const Text('Jadwal hari ini',
+                style: TextStyle(
+                    color: ink, fontSize: 18, fontWeight: FontWeight.w800)),
+            if (todaySchedules.isEmpty)
+              const Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: Text('Tidak ada jadwal kuliah hari ini.',
+                      style: TextStyle(color: muted))),
+            for (final schedule in todaySchedules)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(schedule['CourseName']?.toString() ?? ''),
+                subtitle: Text(
+                    '${schedule['StartTime'] ?? '-'} - ${schedule['EndTime'] ?? '-'}'
+                    '  •  ${schedule['Room'] ?? '-'}'),
+                leading: const Icon(Icons.schedule, color: teal),
+              ),
+            const SizedBox(height: 12),
+            const Text('Tugas mendatang',
+                style: TextStyle(
+                    color: ink, fontSize: 18, fontWeight: FontWeight.w800)),
+            if (upcomingTasks.isEmpty)
+              const Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: Text('Tidak ada tugas dalam 14 hari ke depan.',
+                      style: TextStyle(color: muted))),
+            for (final task in upcomingTasks)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(task['Title']?.toString() ?? ''),
+                subtitle: Text(
+                    '${formatDate(task['Deadline'])}  •  ${statusLabel(task['Status'])}'),
+                leading: const Icon(Icons.task_alt_outlined, color: teal),
+              ),
+          ],
         ]);
       });
 }
