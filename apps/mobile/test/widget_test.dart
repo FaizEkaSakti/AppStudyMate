@@ -71,6 +71,22 @@ void main() {
     expect(find.text('Lab 1'), findsOneWidget);
   });
 
+  testWidgets('schedule form guides day and time entry with validation',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(body: ItemForm(type: 'schedules')),
+    ));
+
+    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
+    expect(find.text('Pilih jam'), findsNWidgets(2));
+
+    await tester.tap(find.text('Simpan'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lengkapi semua informasi terlebih dahulu.'),
+        findsOneWidget);
+  });
+
   testWidgets('saving an edited task refreshes the list synchronously',
       (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});

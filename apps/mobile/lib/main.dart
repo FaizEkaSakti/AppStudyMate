@@ -532,97 +532,225 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
         body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(28),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 480),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final wide = constraints.maxWidth >= 900;
+              final intro = Container(
+                height: wide ? 560 : null,
+                padding: EdgeInsets.all(wide ? 40 : 0),
+                decoration: wide
+                    ? BoxDecoration(
+                        color: teal,
+                        borderRadius: BorderRadius.circular(8),
+                      )
+                    : null,
                 child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                  mainAxisAlignment:
+                      wide ? MainAxisAlignment.center : MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
                       Container(
-                          width: 52,
-                          height: 52,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                              color: teal,
-                              borderRadius: BorderRadius.circular(16)),
-                          child: const Text('AS',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 18))),
-                      const SizedBox(height: 24),
-                      const Text('APPSTUDYMATE',
+                        width: 46,
+                        height: 46,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: wide ? Colors.white : teal,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'S',
                           style: TextStyle(
-                              color: coral,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 2,
-                              fontSize: 11)),
-                      const SizedBox(height: 10),
+                            color: wide ? teal : Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            fontFamily: 'Georgia',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
                       Text(
-                          register
-                              ? 'Mulai lebih teratur.'
-                              : 'Selamat datang kembali.',
-                          style: const TextStyle(
-                              color: ink,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 32)),
-                      const SizedBox(height: 10),
-                      const Text(
-                          'Semua jadwal, tugas, dan catatanmu dalam satu ruang.',
-                          style: TextStyle(color: muted, fontSize: 15)),
-                      const SizedBox(height: 26),
-                      if (register) ...[
-                        field('Nama lengkap', name, 'Nama kamu'),
-                        field('NIM', nim, '20240001')
-                      ],
-                      field('Email', email, 'nama@email.com'),
-                      field('Password', password, 'Minimal 6 karakter',
-                          obscure: true),
-                      if (error != null)
-                        Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Text(error!,
-                                style: const TextStyle(color: Colors.red))),
-                      SizedBox(
-                          width: double.infinity,
-                          child: FilledButton(
-                              onPressed: busy ? null : submit,
-                              style: FilledButton.styleFrom(
-                                  backgroundColor: teal,
-                                  padding: const EdgeInsets.all(16)),
-                              child: Text(busy
-                                  ? 'Memproses...'
-                                  : register
-                                      ? 'Buat akun'
-                                      : 'Masuk'))),
-                      Center(
-                        child: TextButton(
-                          onPressed: () => setState(() {
-                            register = !register;
-                            error = null;
-                          }),
-                          child: Text(register
-                              ? 'Sudah punya akun? Masuk'
-                              : 'Belum punya akun? Daftar'),
+                        'STUDYMATE',
+                        style: TextStyle(
+                          color: wide ? Colors.white : teal,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ]),
-              ),
-            ),
+                    SizedBox(height: wide ? 42 : 24),
+                    Text(
+                      'Ruang belajar,\nlebih tertata.',
+                      style: TextStyle(
+                        color: wide ? Colors.white : ink,
+                        fontSize: wide ? 42 : 32,
+                        height: 1.08,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Georgia',
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Atur jadwal, tugas, dan catatan dengan tenang.',
+                      style: TextStyle(
+                        color: wide
+                            ? Colors.white.withValues(alpha: 0.78)
+                            : muted,
+                        fontSize: 15,
+                        height: 1.5,
+                      ),
+                    ),
+                    if (wide) ...[
+                      const SizedBox(height: 40),
+                      Container(height: 1, color: Colors.white24),
+                      const SizedBox(height: 20),
+                      const Row(children: [
+                        Icon(Icons.auto_awesome_outlined,
+                            color: leaf, size: 18),
+                        SizedBox(width: 10),
+                        Text(
+                          'Satu langkah kecil, setiap hari.',
+                          style: TextStyle(color: Colors.white70, fontSize: 13),
+                        ),
+                      ]),
+                    ],
+                  ],
+                ),
+              );
+
+              final form = Container(
+                padding: EdgeInsets.all(wide ? 36 : 24),
+                decoration: BoxDecoration(
+                  color: paper,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: line),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      register ? 'Buat akun' : 'Masuk ke akunmu',
+                      style: const TextStyle(
+                        color: ink,
+                        fontSize: 25,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Georgia',
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      register
+                          ? 'Mulai susun kegiatan kuliahmu.'
+                          : 'Senang melihatmu kembali.',
+                      style: const TextStyle(color: muted, fontSize: 14),
+                    ),
+                    const SizedBox(height: 26),
+                    if (register) ...[
+                      field('Nama lengkap', name, 'Nama kamu',
+                          icon: Icons.person_outline),
+                      field('NIM', nim, '20240001',
+                          icon: Icons.badge_outlined),
+                    ],
+                    field('Email', email, 'nama@email.com',
+                        icon: Icons.mail_outline),
+                    field('Password', password, 'Minimal 6 karakter',
+                        obscure: true, icon: Icons.lock_outline),
+                    if (error != null)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: coral.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          error!,
+                          style: const TextStyle(color: coral, fontSize: 13),
+                        ),
+                      ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: busy ? null : submit,
+                        icon: busy
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Icon(register
+                                ? Icons.person_add_alt_1
+                                : Icons.arrow_forward),
+                        label: Text(busy
+                            ? 'Memproses...'
+                            : register
+                                ? 'Buat akun'
+                                : 'Masuk'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => setState(() {
+                          register = !register;
+                          error = null;
+                        }),
+                        child: Text(register
+                            ? 'Sudah punya akun? Masuk'
+                            : 'Belum punya akun? Daftar'),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              return Center(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(wide ? 32 : 20),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: wide ? 1080 : 480),
+                    child: wide
+                        ? Row(
+                            children: [
+                              Expanded(flex: 11, child: intro),
+                              const SizedBox(width: 24),
+                              Expanded(flex: 9, child: form),
+                            ],
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              intro,
+                              const SizedBox(height: 24),
+                              form,
+                            ],
+                          ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
       );
 
   Widget field(String label, TextEditingController controller, String hint,
-          {bool obscure = false}) =>
+          {bool obscure = false, required IconData icon}) =>
       Padding(
-          padding: const EdgeInsets.only(bottom: 15),
-          child: TextField(
-              controller: controller,
-              obscureText: obscure,
-              decoration: InputDecoration(labelText: label, hintText: hint)));
+        padding: const EdgeInsets.only(bottom: 14),
+        child: TextField(
+          controller: controller,
+          obscureText: obscure,
+          keyboardType: label == 'Email' ? TextInputType.emailAddress : null,
+          decoration: InputDecoration(
+            labelText: label,
+            hintText: hint,
+            prefixIcon: Icon(icon, size: 20),
+          ),
+        ),
+      );
 }
 
 class HomePage extends StatefulWidget {
@@ -644,151 +772,637 @@ class _HomePageState extends State<HomePage> {
   final titles = const ['Dashboard', 'Jadwal', 'Tugas', 'Catatan', 'Profil'];
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: Text(titles[tab]),
-          backgroundColor: cream,
-          foregroundColor: ink,
-          elevation: 0,
+  Widget build(BuildContext context) {
+    const destinations = [
+      NavigationDestination(
+          icon: Icon(Icons.grid_view_outlined), label: 'Beranda'),
+      NavigationDestination(
+          icon: Icon(Icons.calendar_month_outlined), label: 'Jadwal'),
+      NavigationDestination(
+          icon: Icon(Icons.task_alt_outlined), label: 'Tugas'),
+      NavigationDestination(
+          icon: Icon(Icons.sticky_note_2_outlined), label: 'Catatan'),
+      NavigationDestination(
+          icon: Icon(Icons.person_outline), label: 'Profil'),
+    ];
+      const railDestinations = [
+        NavigationRailDestination(
+          icon: Icon(Icons.grid_view_outlined), label: Text('Beranda')),
+        NavigationRailDestination(
+          icon: Icon(Icons.calendar_month_outlined), label: Text('Jadwal')),
+        NavigationRailDestination(
+          icon: Icon(Icons.task_alt_outlined), label: Text('Tugas')),
+        NavigationRailDestination(
+          icon: Icon(Icons.sticky_note_2_outlined), label: Text('Catatan')),
+        NavigationRailDestination(
+          icon: Icon(Icons.person_outline), label: Text('Profil')),
+      ];
+    final firstName = (widget.user['Name'] as String? ?? 'Mahasiswa')
+        .trim()
+        .split(' ')
+        .first;
+
+    return Scaffold(
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 900;
+            final pages = IndexedStack(
+              index: tab,
+              children: [
+                Dashboard(
+                  client: widget.client,
+                  user: widget.user,
+                  onNavigate: (value) => setState(() => tab = value),
+                ),
+                DataList(client: widget.client, type: 'schedules'),
+                DataList(client: widget.client, type: 'tasks'),
+                DataList(client: widget.client, type: 'notes'),
+                Profile(user: widget.user, onLogout: widget.onLogout),
+              ],
+            );
+
+            return Row(
+              children: [
+                if (wide)
+                  Container(
+                    width: 256,
+                    decoration: const BoxDecoration(
+                      color: paper,
+                      border: Border(right: BorderSide(color: line)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 26, 20, 20),
+                          child: Row(children: [
+                            Container(
+                              width: 38,
+                              height: 38,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: teal,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Text('S',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 21,
+                                      fontWeight: FontWeight.w800,
+                                      fontFamily: 'Georgia')),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text('STUDYMATE',
+                                style: TextStyle(
+                                    color: ink,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800)),
+                          ]),
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.fromLTRB(24, 8, 24, 12),
+                          child: Text('MENU UTAMA',
+                              style: TextStyle(
+                                  color: muted,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800)),
+                        ),
+                        Expanded(
+                          child: NavigationRail(
+                            extended: true,
+                            minExtendedWidth: 256,
+                            backgroundColor: paper,
+                            selectedIndex: tab,
+                            onDestinationSelected: (value) =>
+                                setState(() => tab = value),
+                            destinations: railDestinations,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                          child: Row(children: [
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundColor: leaf.withValues(alpha: 0.35),
+                              child: Text(
+                                firstName.isEmpty
+                                    ? 'S'
+                                    : firstName[0].toUpperCase(),
+                                style: const TextStyle(
+                                    color: teal, fontWeight: FontWeight.w800),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(firstName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: ink,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700)),
+                            ),
+                          ]),
+                        ),
+                      ],
+                    ),
+                  ),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Container(
+                        height: 72,
+                        padding: const EdgeInsets.symmetric(horizontal: 28),
+                        decoration: const BoxDecoration(
+                          color: paper,
+                          border: Border(bottom: BorderSide(color: line)),
+                        ),
+                        child: Row(children: [
+                          Text(titles[tab],
+                              style: const TextStyle(
+                                  color: ink,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  fontFamily: 'Georgia')),
+                          const Spacer(),
+                          CircleAvatar(
+                            radius: 17,
+                            backgroundColor: leaf.withValues(alpha: 0.35),
+                            child: Text(
+                              firstName.isEmpty
+                                  ? 'S'
+                                  : firstName[0].toUpperCase(),
+                              style: const TextStyle(
+                                  color: teal, fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                          if (!wide) ...[
+                            const SizedBox(width: 9),
+                            Text(firstName,
+                                style: const TextStyle(
+                                    color: ink,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ]),
+                      ),
+                      Expanded(child: pages),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
         ),
-        body: IndexedStack(
-          index: tab,
-          children: [
-            Dashboard(client: widget.client, user: widget.user),
-            DataList(client: widget.client, type: 'schedules'),
-            DataList(client: widget.client, type: 'tasks'),
-            DataList(client: widget.client, type: 'notes'),
-            Profile(user: widget.user, onLogout: widget.onLogout),
-          ],
-        ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: tab,
-          onDestinationSelected: (value) => setState(() => tab = value),
-          destinations: const [
-            NavigationDestination(
-                icon: Icon(Icons.home_outlined), label: 'Beranda'),
-            NavigationDestination(
-                icon: Icon(Icons.schedule_outlined), label: 'Jadwal'),
-            NavigationDestination(
-                icon: Icon(Icons.task_alt_outlined), label: 'Tugas'),
-            NavigationDestination(
-                icon: Icon(Icons.notes_outlined), label: 'Catatan'),
-            NavigationDestination(
-                icon: Icon(Icons.person_outline), label: 'Profil'),
-          ],
-        ),
-      );
+      ),
+      bottomNavigationBar: MediaQuery.sizeOf(context).width >= 900
+          ? null
+          : NavigationBar(
+              selectedIndex: tab,
+              onDestinationSelected: (value) => setState(() => tab = value),
+              destinations: destinations,
+            ),
+    );
+  }
 }
 
-class Dashboard extends StatelessWidget {
-  const Dashboard({required this.client, required this.user, super.key});
+class Dashboard extends StatefulWidget {
+  const Dashboard(
+      {required this.client,
+      required this.user,
+      required this.onNavigate,
+      super.key});
   final ApiClient client;
   final Map<String, dynamic> user;
+  final ValueChanged<int> onNavigate;
+
+  @override
+  State<Dashboard> createState() => _DashboardState();
+}
+
+class _DashboardState extends State<Dashboard> {
+  late Future<dynamic> future;
+
+  @override
+  void initState() {
+    super.initState();
+    future = widget.client.request('/dashboard');
+  }
+
+  Future<void> _refresh() async {
+    final next = widget.client.request('/dashboard');
+    setState(() => future = next);
+    try {
+      await next;
+    } on Exception {
+      // The FutureBuilder presents the error state.
+    }
+  }
 
   @override
   Widget build(BuildContext context) => FutureBuilder<dynamic>(
-      future: client.request('/dashboard'),
+      future: future,
       builder: (context, snapshot) {
         final summary =
             snapshot.data?['Summary'] as Map<String, dynamic>? ?? {};
         final cards = [
-          ('Tugas', summary['TotalTasks'] ?? 0),
-          ('Selesai', summary['TotalCompletedTasks'] ?? 0),
-          ('Pending', summary['TotalPendingTasks'] ?? 0),
-          ('Terlambat', summary['TotalOverdueTasks'] ?? 0)
+          ('Total tugas', summary['TotalTasks'] ?? 0, Icons.checklist, teal),
+          ('Selesai', summary['TotalCompletedTasks'] ?? 0,
+              Icons.task_alt, const Color(0xff718f50)),
+          ('Berjalan', summary['TotalPendingTasks'] ?? 0,
+              Icons.timelapse, gold),
+          ('Terlambat', summary['TotalOverdueTasks'] ?? 0,
+              Icons.warning_amber_outlined, coral),
         ];
         final todaySchedules =
             snapshot.data?['TodaySchedules'] as List<dynamic>? ?? [];
         final upcomingTasks =
             snapshot.data?['UpcomingTasks'] as List<dynamic>? ?? [];
-        return ListView(padding: const EdgeInsets.all(24), children: [
-          const Text('APPSTUDYMATE',
-              style: TextStyle(
-                  color: coral,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 2,
-                  fontSize: 11)),
-          const SizedBox(height: 10),
-          Text('Halo, ${(user['Name'] as String? ?? '').split(' ').first}.',
-              style: const TextStyle(
-                  color: ink, fontWeight: FontWeight.w800, fontSize: 30)),
-          const Text('Mari jaga ritme belajarmu hari ini.',
-              style: TextStyle(color: muted)),
-          const SizedBox(height: 24),
-          Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: cards
-                  .map((item) => SizedBox(
-                      width: MediaQuery.sizeOf(context).width / 2 - 34,
-                      child: Card(
-                          color: paper,
-                          child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('${item.$2}',
-                                        style: const TextStyle(
-                                            color: teal,
-                                            fontSize: 28,
-                                            fontWeight: FontWeight.w800)),
-                                    Text(item.$1,
-                                        style: const TextStyle(color: muted))
-                                  ])))))
-                  .toList()),
-          const SizedBox(height: 24),
-          const Text('Ringkasan aktivitas',
-              style: TextStyle(
-                  color: ink, fontSize: 18, fontWeight: FontWeight.w800)),
-          if (snapshot.hasError)
-            const Padding(
-                padding: EdgeInsets.only(top: 16),
-                child: Text('Tidak dapat memuat data dashboard.',
-                    style: TextStyle(color: muted))),
-          if (snapshot.connectionState == ConnectionState.waiting)
-            const Padding(
-                padding: EdgeInsets.only(top: 24),
-                child: Center(child: CircularProgressIndicator())),
-          if (snapshot.hasData) ...[
-            const SizedBox(height: 24),
-            const Text('Jadwal hari ini',
-                style: TextStyle(
-                    color: ink, fontSize: 18, fontWeight: FontWeight.w800)),
-            if (todaySchedules.isEmpty)
-              const Padding(
-                  padding: EdgeInsets.only(top: 12),
-                  child: Text('Tidak ada jadwal kuliah hari ini.',
-                      style: TextStyle(color: muted))),
-            for (final schedule in todaySchedules)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(schedule['CourseName']?.toString() ?? ''),
-                subtitle: Text(
-                    '${schedule['StartTime'] ?? '-'} - ${schedule['EndTime'] ?? '-'}'
-                    '  •  ${schedule['Room'] ?? '-'}'),
-                leading: const Icon(Icons.schedule, color: teal),
+        final firstName = (widget.user['Name'] as String? ?? 'Mahasiswa')
+            .trim()
+            .split(' ')
+            .first;
+        final width = MediaQuery.sizeOf(context).width;
+        final horizontalPadding = width >= 900 ? 36.0 : 20.0;
+
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1120),
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                    horizontalPadding, 28, horizontalPadding, 40),
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(width >= 600 ? 28 : 22),
+                    decoration: BoxDecoration(
+                      color: teal,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_todayLabel(),
+                                style: const TextStyle(
+                                    color: leaf,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 10),
+                            Text('Halo, $firstName.',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: width >= 600 ? 34 : 27,
+                                    height: 1.1,
+                                    fontWeight: FontWeight.w700,
+                                    fontFamily: 'Georgia')),
+                            const SizedBox(height: 8),
+                            Text('Mari jaga ritme belajarmu hari ini.',
+                                style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.78),
+                                    fontSize: 14)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Container(
+                        width: width >= 600 ? 76 : 54,
+                        height: width >= 600 ? 76 : 54,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: leaf,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.menu_book_rounded,
+                            size: width >= 600 ? 36 : 27, color: teal),
+                      ),
+                    ]),
+                  ),
+                  const SizedBox(height: 28),
+                  _sectionHeading('Aktivitas belajar'),
+                  const SizedBox(height: 14),
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    _statePanel(
+                      icon: Icons.hourglass_top_rounded,
+                      title: 'Menyiapkan ringkasan',
+                      detail: 'Aktivitasmu akan tampil sebentar lagi.',
+                      busy: true,
+                    ),
+                  if (snapshot.hasError)
+                    _statePanel(
+                      icon: Icons.cloud_off_outlined,
+                      title: 'Data belum dapat dimuat',
+                      detail: 'Periksa koneksi, lalu coba muat ulang.',
+                      onRetry: _refresh,
+                    ),
+                  if (snapshot.hasData) ...[
+                    LayoutBuilder(builder: (context, constraints) {
+                      final columns = constraints.maxWidth >= 760 ? 4 : 2;
+                      final tileWidth = (constraints.maxWidth -
+                              (columns - 1) * 12) /
+                          columns;
+                      return Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: cards
+                            .map((item) => SizedBox(
+                                  width: tileWidth,
+                                  child: _metricTile(
+                                    title: item.$1,
+                                    value: item.$2.toString(),
+                                    icon: item.$3,
+                                    color: item.$4,
+                                  ),
+                                ))
+                            .toList(),
+                      );
+                    }),
+                    const SizedBox(height: 30),
+                    _sectionHeading('Jadwal hari ini',
+                        action: 'Lihat jadwal',
+                        onTap: () => widget.onNavigate(1)),
+                    const SizedBox(height: 14),
+                    if (todaySchedules.isEmpty)
+                      _emptyPanel(
+                        icon: Icons.calendar_today_outlined,
+                        title: 'Hari ini masih lapang',
+                        detail: 'Belum ada jadwal kuliah untuk hari ini.',
+                      )
+                    else
+                      for (final schedule in todaySchedules)
+                        _scheduleTile(schedule as Map<String, dynamic>),
+                    const SizedBox(height: 28),
+                    _sectionHeading('Tugas mendatang',
+                        action: 'Lihat tugas',
+                        onTap: () => widget.onNavigate(2)),
+                    const SizedBox(height: 14),
+                    if (upcomingTasks.isEmpty)
+                      _emptyPanel(
+                        icon: Icons.task_alt_outlined,
+                        title: 'Belum ada tenggat dekat',
+                        detail: 'Tugas 14 hari ke depan akan tampil di sini.',
+                      )
+                    else
+                      for (final task in upcomingTasks)
+                        _taskTile(task as Map<String, dynamic>),
+                  ],
+                ],
               ),
-            const SizedBox(height: 12),
-            const Text('Tugas mendatang',
-                style: TextStyle(
-                    color: ink, fontSize: 18, fontWeight: FontWeight.w800)),
-            if (upcomingTasks.isEmpty)
-              const Padding(
-                  padding: EdgeInsets.only(top: 12),
-                  child: Text('Tidak ada tugas dalam 14 hari ke depan.',
-                      style: TextStyle(color: muted))),
-            for (final task in upcomingTasks)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(task['Title']?.toString() ?? ''),
-                subtitle: Text(
-                    '${formatDate(task['Deadline'])}  •  ${statusLabel(task['Status'])}'),
-                leading: const Icon(Icons.task_alt_outlined, color: teal),
-              ),
-          ],
-        ]);
+            ),
+          ),
+        );
       });
+
+  Widget _sectionHeading(String title, {String? action, VoidCallback? onTap}) =>
+      Row(children: [
+        Expanded(
+          child: Text(title,
+              style: const TextStyle(
+                  color: ink,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  fontFamily: 'Georgia')),
+        ),
+        if (action != null)
+          TextButton.icon(
+            onPressed: onTap,
+            iconAlignment: IconAlignment.end,
+            icon: const Icon(Icons.arrow_forward, size: 15),
+            label: Text(action),
+          ),
+      ]);
+
+  Widget _metricTile({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) =>
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: paper,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: line),
+        ),
+        child: Row(children: [
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 21),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(value,
+                    style: TextStyle(
+                        color: color,
+                        fontSize: 23,
+                        height: 1.1,
+                        fontWeight: FontWeight.w700,
+                        fontFamily: 'Georgia')),
+                const SizedBox(height: 4),
+                Text(title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: muted, fontSize: 11)),
+              ],
+            ),
+          ),
+        ]),
+      );
+
+  Widget _scheduleTile(Map<String, dynamic> schedule) => Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: paper,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: line),
+        ),
+        child: Row(children: [
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: leaf.withValues(alpha: 0.28),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.schedule_rounded, color: teal, size: 21),
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(schedule['CourseName']?.toString() ?? 'Mata kuliah',
+                    style: const TextStyle(
+                        color: ink, fontWeight: FontWeight.w700, fontSize: 14)),
+                const SizedBox(height: 4),
+                Text(schedule['Room']?.toString() ?? 'Ruang belum diatur',
+                    style: const TextStyle(color: muted, fontSize: 12)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text('${schedule['StartTime'] ?? '-'}',
+              style: const TextStyle(
+                  color: teal, fontSize: 12, fontWeight: FontWeight.w700)),
+        ]),
+      );
+
+  Widget _taskTile(Map<String, dynamic> task) => Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: paper,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: line),
+        ),
+        child: Row(children: [
+          Container(
+            width: 4,
+            height: 42,
+            decoration: BoxDecoration(
+              color: coral,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(task['Title']?.toString() ?? 'Tugas',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: ink, fontWeight: FontWeight.w700, fontSize: 14)),
+                const SizedBox(height: 4),
+                Text(formatDate(task['Deadline']),
+                    style: const TextStyle(color: muted, fontSize: 12)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(statusLabel(task['Status']),
+              style: const TextStyle(
+                  color: teal, fontSize: 11, fontWeight: FontWeight.w700)),
+        ]),
+      );
+
+  Widget _emptyPanel({
+    required IconData icon,
+    required String title,
+    required String detail,
+  }) =>
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+        decoration: BoxDecoration(
+          color: paper,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: line),
+        ),
+        child: Row(children: [
+          Icon(icon, color: muted, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        color: ink, fontSize: 13, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 3),
+                Text(detail,
+                    style: const TextStyle(color: muted, fontSize: 12)),
+              ],
+            ),
+          ),
+        ]),
+      );
+
+  Widget _statePanel({
+    required IconData icon,
+    required String title,
+    required String detail,
+    bool busy = false,
+    VoidCallback? onRetry,
+  }) =>
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: paper,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: line),
+        ),
+        child: Column(children: [
+          if (busy)
+            const SizedBox.square(
+                dimension: 22,
+                child: CircularProgressIndicator(strokeWidth: 2.5))
+          else
+            Icon(icon, color: coral, size: 24),
+          const SizedBox(height: 12),
+          Text(title,
+              style: const TextStyle(
+                  color: ink, fontWeight: FontWeight.w700, fontSize: 14)),
+          const SizedBox(height: 4),
+          Text(detail,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: muted, fontSize: 12)),
+          if (onRetry != null) ...[
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh, size: 17),
+              label: const Text('Coba lagi'),
+            ),
+          ],
+        ]),
+      );
+}
+
+String _todayLabel() {
+  const weekdays = [
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+    'Minggu',
+  ];
+  const months = [
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+  ];
+  final now = DateTime.now();
+  return '${weekdays[now.weekday - 1]}, ${now.day} ${months[now.month - 1]} ${now.year}';
 }
 
 class DataList extends StatefulWidget {
@@ -863,48 +1477,265 @@ class _DataListState extends State<DataList> {
   Future<void> _showDetails(Map<String, dynamic> item) async {
     final isTask = widget.type == 'tasks';
     final title = item[isTask ? 'Title' : 'CourseName']?.toString() ?? '';
-    final details = isTask
-        ? <(String, String)>[
-            ('Deadline', formatDate(item['Deadline'])),
-            ('Status', statusLabel(item['Status'])),
-            ('Deskripsi', item['Description']?.toString() ?? '-'),
-          ]
-        : <(String, String)>[
-            ('Dosen', item['Lecturer']?.toString() ?? '-'),
-            ('Hari', item['Day']?.toString() ?? '-'),
-            (
-              'Waktu',
-              '${item['StartTime'] ?? '-'} - ${item['EndTime'] ?? '-'}'
-            ),
-            ('Ruangan', item['Room']?.toString() ?? '-'),
-          ];
 
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isTask ? 'Detail tugas' : 'Detail jadwal'),
-        content: SizedBox(
-          width: 380,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        color: ink, fontSize: 18, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 16),
-                for (final detail in details)
-                  _DetailRow(label: detail.$1, value: detail.$2),
-              ],
-            ),
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(20),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480, maxHeight: 620),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+                decoration: const BoxDecoration(
+                  color: teal,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+                ),
+                child: Row(children: [
+                  Icon(
+                    isTask ? Icons.task_alt_rounded : Icons.event_note_rounded,
+                    color: leaf,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      isTask ? 'Detail tugas' : 'Detail jadwal',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Tutup',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: Colors.white),
+                  ),
+                ]),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(22, 20, 22, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(title,
+                          style: const TextStyle(
+                              color: ink,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'Georgia')),
+                      const SizedBox(height: 18),
+                      if (isTask) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: cream,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: line),
+                          ),
+                          child: Row(children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: coral,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.event_available_outlined,
+                                  color: Colors.white, size: 22),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('TENGGAT TUGAS',
+                                      style: TextStyle(
+                                          color: muted,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800)),
+                                  const SizedBox(height: 5),
+                                  Text(formatDate(item['Deadline']),
+                                      style: const TextStyle(
+                                          color: ink,
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w700)),
+                                ],
+                              ),
+                            ),
+                          ]),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: paper,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: line),
+                          ),
+                          child: Row(children: [
+                            const Icon(Icons.flag_outlined,
+                                color: teal, size: 19),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Text('STATUS',
+                                  style: TextStyle(
+                                      color: muted,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800)),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: leaf.withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(statusLabel(item['Status']),
+                                  style: const TextStyle(
+                                      color: teal,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700)),
+                            ),
+                          ]),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: paper,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: line),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(children: [
+                                Icon(Icons.notes_rounded,
+                                    color: teal, size: 18),
+                                SizedBox(width: 8),
+                                Text('DESKRIPSI',
+                                    style: TextStyle(
+                                        color: muted,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800)),
+                              ]),
+                              const SizedBox(height: 10),
+                              Text(
+                                (item['Description']?.toString().trim().isNotEmpty ??
+                                        false)
+                                    ? item['Description'].toString()
+                                    : 'Belum ada deskripsi untuk tugas ini.',
+                                style: const TextStyle(
+                                    color: ink, fontSize: 14, height: 1.45),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: cream,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: line),
+                          ),
+                          child: Row(children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: teal,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.calendar_month_rounded,
+                                  color: Colors.white, size: 22),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('HARI & WAKTU',
+                                      style: TextStyle(
+                                          color: muted,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800)),
+                                  const SizedBox(height: 5),
+                                  Text(item['Day']?.toString() ?? '-',
+                                      style: const TextStyle(
+                                          color: ink,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${item['StartTime'] ?? '-'} - ${item['EndTime'] ?? '-'}',
+                                    style: const TextStyle(
+                                        color: teal,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ]),
+                        ),
+                        const SizedBox(height: 12),
+                        LayoutBuilder(builder: (context, constraints) {
+                          final stacked = constraints.maxWidth < 360;
+                          final tileWidth = stacked
+                              ? constraints.maxWidth
+                              : (constraints.maxWidth - 12) / 2;
+                          return Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              _ScheduleDetailCard(
+                                width: tileWidth,
+                                icon: Icons.person_outline,
+                                label: 'DOSEN',
+                                value: item['Lecturer']?.toString() ?? '-',
+                              ),
+                              _ScheduleDetailCard(
+                                width: tileWidth,
+                                icon: Icons.location_on_outlined,
+                                label: 'RUANGAN',
+                                value: item['Room']?.toString() ?? '-',
+                              ),
+                            ],
+                          );
+                        }),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: FilledButton.icon(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text('Selesai'),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Tutup')),
-        ],
       ),
     );
   }
@@ -1016,23 +1847,44 @@ class _DataListState extends State<DataList> {
       });
 }
 
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
+class _ScheduleDetailCard extends StatelessWidget {
+  const _ScheduleDetailCard({
+    required this.width,
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
+  final double width;
+  final IconData icon;
   final String label;
   final String value;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
+  Widget build(BuildContext context) => Container(
+        width: width,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: paper,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: line),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label,
+            Row(children: [
+              Icon(icon, color: teal, size: 17),
+              const SizedBox(width: 7),
+              Text(label,
+                  style: const TextStyle(
+                      color: muted, fontSize: 10, fontWeight: FontWeight.w800)),
+            ]),
+            const SizedBox(height: 9),
+            Text(value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                    color: muted, fontSize: 12, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 3),
-            Text(value, style: const TextStyle(color: ink, fontSize: 15)),
+                    color: ink, fontSize: 13, fontWeight: FontWeight.w600)),
           ],
         ),
       );
@@ -1061,9 +1913,23 @@ class ItemForm extends StatefulWidget {
 }
 
 class _ItemFormState extends State<ItemForm> {
+  static const days = [
+    'Senin',
+    'Selasa',
+    'Rabu',
+    'Kamis',
+    'Jumat',
+    'Sabtu',
+    'Minggu',
+  ];
+
   late final Map<String, TextEditingController> fields;
   late String status;
   DateTime? deadline;
+  String? selectedDay;
+  TimeOfDay? startTime;
+  TimeOfDay? endTime;
+  String? formError;
 
   @override
   void initState() {
@@ -1071,7 +1937,7 @@ class _ItemFormState extends State<ItemForm> {
     final item = widget.item ?? {};
     fields = {
       for (final key in widget.type == 'schedules'
-          ? ['CourseName', 'Lecturer', 'Day', 'StartTime', 'EndTime', 'Room']
+        ? ['CourseName', 'Lecturer', 'Room']
           : widget.type == 'tasks'
               ? ['Title', 'Description']
               : ['Title', 'Content'])
@@ -1079,6 +1945,10 @@ class _ItemFormState extends State<ItemForm> {
     };
     status = item['Status']?.toString() ?? 'TODO';
     deadline = DateTime.tryParse(item['Deadline']?.toString() ?? '');
+    final savedDay = item['Day']?.toString();
+    selectedDay = days.contains(savedDay) ? savedDay : null;
+    startTime = _parseTime(item['StartTime']?.toString());
+    endTime = _parseTime(item['EndTime']?.toString());
   }
 
   @override
@@ -1098,15 +1968,58 @@ class _ItemFormState extends State<ItemForm> {
     if (picked != null) setState(() => deadline = picked);
   }
 
+  Future<void> _pickTime({required bool isStart}) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: (isStart ? startTime : endTime) ??
+          (isStart
+              ? const TimeOfDay(hour: 8, minute: 0)
+              : const TimeOfDay(hour: 9, minute: 0)),
+      helpText: isStart ? 'Pilih jam mulai' : 'Pilih jam selesai',
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      if (isStart) {
+        startTime = picked;
+      } else {
+        endTime = picked;
+      }
+      formError = null;
+    });
+  }
+
   void submit() {
-    if (fields.values.any((controller) => controller.text.trim().isEmpty)) {
+    final hasEmptyField =
+        fields.values.any((controller) => controller.text.trim().isEmpty);
+    if (hasEmptyField) {
+      setState(() => formError = 'Lengkapi semua informasi terlebih dahulu.');
       return;
     }
+
+    if (widget.type == 'schedules') {
+      if (selectedDay == null || startTime == null || endTime == null) {
+        setState(() => formError = 'Pilih hari serta jam mulai dan selesai.');
+        return;
+      }
+      final startMinutes = startTime!.hour * 60 + startTime!.minute;
+      final endMinutes = endTime!.hour * 60 + endTime!.minute;
+      if (endMinutes <= startMinutes) {
+        setState(
+            () => formError = 'Jam selesai harus setelah jam mulai.');
+        return;
+      }
+    }
+
     final item = {
       for (final entry in fields.entries) entry.key: entry.value.text.trim(),
       'Id': widget.item?['Id'] ??
           '${widget.type}-${DateTime.now().microsecondsSinceEpoch}'
     };
+    if (widget.type == 'schedules') {
+      item['Day'] = selectedDay!;
+      item['StartTime'] = _formatTime(startTime!);
+      item['EndTime'] = _formatTime(endTime!);
+    }
     if (widget.type == 'tasks') {
       item['Status'] = status;
       item['Deadline'] = (deadline ?? DateTime.now()).toIso8601String();
@@ -1121,57 +2034,274 @@ class _ItemFormState extends State<ItemForm> {
         : widget.type == 'tasks'
             ? 'tugas'
             : 'catatan';
-    return AlertDialog(
-      title: Text(widget.item == null ? 'Tambah $label' : 'Edit $label'),
-      content: SingleChildScrollView(
+    final title = '${widget.item == null ? 'Tambah' : 'Edit'} $label';
+    return Dialog(
+      insetPadding: const EdgeInsets.all(18),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 540, maxHeight: 720),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ...fields.entries.map((entry) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: TextField(
-                    controller: entry.value,
-                    maxLines:
-                        entry.key == 'Description' || entry.key == 'Content'
-                            ? 3
-                            : 1,
-                    decoration:
-                        InputDecoration(labelText: fieldLabel(entry.key)),
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 15, 12, 15),
+              decoration: const BoxDecoration(
+                color: teal,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+              ),
+              child: Row(children: [
+                Icon(
+                  widget.type == 'schedules'
+                      ? Icons.calendar_month_outlined
+                      : widget.type == 'tasks'
+                          ? Icons.task_alt_outlined
+                          : Icons.sticky_note_2_outlined,
+                  color: leaf,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 3),
+                      Text(
+                        widget.type == 'schedules'
+                            ? 'Atur waktu dan detail perkuliahan.'
+                            : widget.type == 'tasks'
+                                ? 'Catat tenggat dan progres tugas.'
+                                : 'Simpan materi pentingmu.',
+                        style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.75),
+                            fontSize: 12),
+                      ),
+                    ],
                   ),
-                )),
-            if (widget.type == 'tasks') ...[
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Deadline'),
-                subtitle: Text(
-                    deadline == null ? 'Pilih tanggal' : formatDate(deadline)),
-                trailing: const Icon(Icons.calendar_today_outlined),
-                onTap: pickDeadline,
+                ),
+                IconButton(
+                  tooltip: 'Tutup',
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close, color: Colors.white),
+                ),
+              ]),
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.type == 'schedules') ...[
+                      _formSectionLabel('INFORMASI KULIAH'),
+                      const SizedBox(height: 12),
+                    ],
+                    ...fields.entries.map((entry) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: TextField(
+                            controller: entry.value,
+                            onChanged: (_) {
+                              if (formError != null) {
+                                setState(() => formError = null);
+                              }
+                            },
+                            maxLines: entry.key == 'Description' ||
+                                    entry.key == 'Content'
+                                ? 3
+                                : 1,
+                            decoration: InputDecoration(
+                              labelText: fieldLabel(entry.key),
+                              hintText: _fieldHint(entry.key),
+                              alignLabelWithHint: entry.key == 'Description' ||
+                                  entry.key == 'Content',
+                              prefixIcon: entry.key == 'CourseName'
+                                  ? const Icon(Icons.menu_book_outlined)
+                                  : entry.key == 'Lecturer'
+                                      ? const Icon(Icons.person_outline)
+                                      : entry.key == 'Room'
+                                          ? const Icon(Icons.location_on_outlined)
+                                          : null,
+                            ),
+                          ),
+                        )),
+                    if (widget.type == 'schedules') ...[
+                      DropdownButtonFormField<String>(
+                        initialValue: selectedDay,
+                        decoration: const InputDecoration(
+                          labelText: 'Hari kuliah',
+                          prefixIcon: Icon(Icons.today_outlined),
+                        ),
+                        items: days
+                            .map((day) => DropdownMenuItem(
+                                value: day, child: Text(day)))
+                            .toList(),
+                        onChanged: (value) => setState(() {
+                          selectedDay = value;
+                          formError = null;
+                        }),
+                      ),
+                      const SizedBox(height: 14),
+                      _formSectionLabel('WAKTU KULIAH'),
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        Expanded(
+                          child: _timeField(
+                            label: 'Mulai',
+                            value: startTime,
+                            onTap: () => _pickTime(isStart: true),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _timeField(
+                            label: 'Selesai',
+                            value: endTime,
+                            onTap: () => _pickTime(isStart: false),
+                          ),
+                        ),
+                      ]),
+                    ],
+                    if (widget.type == 'tasks') ...[
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.event_outlined, color: teal),
+                        title: const Text('Tenggat'),
+                        subtitle: Text(deadline == null
+                            ? 'Pilih tanggal'
+                            : formatDate(deadline)),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: pickDeadline,
+                      ),
+                      DropdownButtonFormField<String>(
+                        initialValue: status,
+                        decoration: const InputDecoration(
+                            labelText: 'Status',
+                            prefixIcon: Icon(Icons.flag_outlined)),
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'TODO', child: Text('Belum dikerjakan')),
+                          DropdownMenuItem(
+                              value: 'IN_PROGRESS', child: Text('Dikerjakan')),
+                          DropdownMenuItem(
+                              value: 'DONE', child: Text('Selesai')),
+                        ],
+                        onChanged: (value) =>
+                            setState(() => status = value ?? 'TODO'),
+                      ),
+                    ],
+                    if (formError != null) ...[
+                      const SizedBox(height: 14),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: coral.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(children: [
+                          const Icon(Icons.info_outline,
+                              color: coral, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(formError!,
+                                style: const TextStyle(
+                                    color: coral, fontSize: 12)),
+                          ),
+                        ]),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-              DropdownButtonFormField<String>(
-                initialValue: status,
-                decoration: const InputDecoration(labelText: 'Status'),
-                items: const [
-                  DropdownMenuItem(
-                      value: 'TODO', child: Text('Belum dikerjakan')),
-                  DropdownMenuItem(
-                      value: 'IN_PROGRESS', child: Text('Dikerjakan')),
-                  DropdownMenuItem(value: 'DONE', child: Text('Selesai')),
+            ),
+            const Divider(height: 1, color: line),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, size: 17),
+                    label: const Text('Batal'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    onPressed: submit,
+                    icon: const Icon(Icons.check, size: 18),
+                    label: const Text('Simpan'),
+                  ),
                 ],
-                onChanged: (value) => setState(() => status = value ?? 'TODO'),
               ),
-            ],
+            ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal')),
-        FilledButton(onPressed: submit, child: const Text('Simpan')),
-      ],
     );
   }
+
+  Widget _formSectionLabel(String label) => Align(
+        alignment: Alignment.centerLeft,
+        child: Text(label,
+            style: const TextStyle(
+                color: muted, fontSize: 10, fontWeight: FontWeight.w800)),
+      );
+
+  Widget _timeField({
+    required String label,
+    required TimeOfDay? value,
+    required VoidCallback onTap,
+  }) =>
+      Semantics(
+        button: true,
+        label: '$label ${value == null ? 'belum dipilih' : value.format(context)}',
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: InputDecorator(
+            decoration: InputDecoration(
+              labelText: label,
+              prefixIcon: const Icon(Icons.access_time),
+              suffixIcon: const Icon(Icons.arrow_drop_down),
+            ),
+            child: Text(
+              value == null ? 'Pilih jam' : _formatTime(value),
+              style: TextStyle(
+                  color: value == null ? muted : ink,
+                  fontSize: 14,
+                  fontWeight: value == null ? FontWeight.w400 : FontWeight.w600),
+            ),
+          ),
+        ),
+      );
+
+  String _fieldHint(String key) => switch (key) {
+        'CourseName' => 'Contoh: Pemrograman Mobile',
+        'Lecturer' => 'Nama dosen pengampu',
+        'Room' => 'Contoh: Lab 2',
+        'Title' => 'Tulis judul singkat',
+        'Description' => 'Tambahkan detail jika diperlukan',
+        'Content' => 'Tulis isi catatanmu',
+        _ => '',
+      };
+
+  TimeOfDay? _parseTime(String? value) {
+    if (value == null) return null;
+    final parts = value.split(':');
+    if (parts.length < 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null || hour > 23 || minute > 59) {
+      return null;
+    }
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  String _formatTime(TimeOfDay value) =>
+      '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 }
 
 String fieldLabel(String key) => switch (key) {

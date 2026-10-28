@@ -122,6 +122,9 @@ https://docs.google.com/document/d/1_st2LbMxO7IKU-AG6hhNTBw-i3JJN4Uv8RTMV2sd-DI/
 Tugas p6
 https://docs.google.com/document/d/1PQOXnzPewHYa4ZpkaDbkVUQXYYMiFt_8s46lruofNA8/edit?usp=sharing
 
+Tugas p7
+https://docs.google.com/document/d/1-XSxcPn9ruyI5j-tqu9ANmLQ-RVfx2-I1D9Qa1KCLZw/edit?usp=sharing
+
 
 
 
