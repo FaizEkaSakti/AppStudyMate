@@ -1477,6 +1477,28 @@ class _DataListState extends State<DataList> {
   Future<void> _showDetails(Map<String, dynamic> item) async {
     final isTask = widget.type == 'tasks';
     final title = item[isTask ? 'Title' : 'CourseName']?.toString() ?? '';
+    final isDone = item['Status'] == 'DONE';
+    final isInProgress = item['Status'] == 'IN_PROGRESS';
+    final taskInfoTitle = isDone
+      ? 'Tugas sudah dikerjakan'
+      : isInProgress
+        ? 'Tugas sedang dikerjakan'
+        : 'Tugas belum dikerjakan';
+    final taskInfoDetail = isDone
+      ? 'Tugas ini telah ditandai selesai.'
+      : isInProgress
+        ? 'Progres tugas ini sedang berjalan.'
+        : 'Tugas ini masih perlu diselesaikan.';
+    final taskInfoColor = isDone
+      ? teal
+      : isInProgress
+        ? gold
+        : coral;
+    final taskInfoIcon = isDone
+      ? Icons.check_circle_outline
+      : isInProgress
+        ? Icons.pending_outlined
+        : Icons.radio_button_unchecked;
 
     await showDialog<void>(
       context: context,
@@ -1607,6 +1629,41 @@ class _DataListState extends State<DataList> {
                                       fontWeight: FontWeight.w700)),
                             ),
                           ]),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: taskInfoColor.withValues(alpha: 0.09),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: taskInfoColor.withValues(alpha: 0.25)),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(taskInfoIcon,
+                                  color: taskInfoColor, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(taskInfoTitle,
+                                        style: TextStyle(
+                                            color: taskInfoColor,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700)),
+                                    const SizedBox(height: 3),
+                                    Text(taskInfoDetail,
+                                        style: const TextStyle(
+                                            color: ink, fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Container(

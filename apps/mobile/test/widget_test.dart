@@ -38,7 +38,44 @@ void main() {
     expect(find.text('Detail tugas'), findsOneWidget);
     expect(find.text('20/10/2026'), findsOneWidget);
     expect(find.text('Dikerjakan'), findsOneWidget);
+    expect(find.text('Tugas sedang dikerjakan'), findsOneWidget);
     expect(find.text('Bab satu dan dua'), findsOneWidget);
+  });
+
+  testWidgets('task details explain completed and pending status',
+      (WidgetTester tester) async {
+    final client = ApiClient();
+    client.localData['tasks']!.addAll([
+      {
+        'Id': 'done-task',
+        'Title': 'Tugas selesai',
+        'Description': 'Sudah dikumpulkan',
+        'Deadline': '2026-10-20T00:00:00.000Z',
+        'Status': 'DONE',
+      },
+      {
+        'Id': 'pending-task',
+        'Title': 'Tugas tertunda',
+        'Description': 'Belum mulai',
+        'Deadline': '2026-10-21T00:00:00.000Z',
+        'Status': 'TODO',
+      },
+    ]);
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: DataList(client: client, type: 'tasks')),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Tugas selesai'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tugas sudah dikerjakan'), findsOneWidget);
+    await tester.tap(find.byTooltip('Tutup'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Tugas tertunda'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tugas belum dikerjakan'), findsOneWidget);
   });
 
   testWidgets('schedule popup menu opens schedule details',
