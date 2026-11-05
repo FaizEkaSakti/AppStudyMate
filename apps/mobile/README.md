@@ -1,10 +1,29 @@
 # AppStudyMate Flutter
 
-Client Flutter untuk API AppStudyMate.
+Client Flutter untuk Firebase atau API AppStudyMate.
+
+## Menjalankan dengan Firebase
+
+Dari root repositori, daftarkan aplikasi Android di Firebase Console
+menggunakan package name `com.example.app_studymate_mobile`, lalu aktifkan
+Email/Password di Firebase Authentication. Jalankan perintah Flutter dari folder
+`apps/mobile`:
+
+```bash
+cd apps/mobile
+flutter pub get
+flutter run --dart-define=FIREBASE_ANDROID_APP_ID=1:PROJECT_NUMBER:android:APP_ID
+```
+
+Jangan berikan `API_URL` saat memakai Firebase; jika ada, aplikasi akan
+mengirim permintaan login ke API, bukan Firebase.
 
 ## Menjalankan
 
+Untuk memakai REST API:
+
 ```bash
+cd apps/mobile
 flutter pub get
 flutter run --dart-define=API_URL=http://10.0.2.2:4000/api
 ```

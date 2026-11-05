@@ -125,6 +125,8 @@ https://docs.google.com/document/d/1PQOXnzPewHYa4ZpkaDbkVUQXYYMiFt_8s46lruofNA8/
 Tugas p7
 https://docs.google.com/document/d/1-XSxcPn9ruyI5j-tqu9ANmLQ-RVfx2-I1D9Qa1KCLZw/edit?usp=sharing
 
+Tugas p8
+https://docs.google.com/document/d/1HV6sSE5BubVThiH4S4j_-qrlLzYy_UEi12Vae2N-tVY/edit?usp=sharing
 
 
 

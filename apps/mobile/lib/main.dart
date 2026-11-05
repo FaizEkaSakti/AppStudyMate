@@ -16,6 +16,8 @@ const firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY',
     defaultValue: 'AIzaSyBsTO332dtvoRfqy321FASqDhTeFzUD6Xc');
 const firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID',
     defaultValue: '1:185834578847:web:cb2cf16c3fede5f25353aa');
+const firebaseAndroidAppId =
+    String.fromEnvironment('FIREBASE_ANDROID_APP_ID');
 const firebaseMessagingSenderId = String.fromEnvironment(
     'FIREBASE_MESSAGING_SENDER_ID',
     defaultValue: '185834578847');
@@ -63,7 +65,10 @@ class ApiClient {
   bool get firebaseReady =>
       !apiEnabled &&
       !firebaseDisabled &&
-      kIsWeb &&
+      (kIsWeb ||
+          (defaultTargetPlatform == TargetPlatform.android &&
+              firebaseAndroidAppId.startsWith('1:') &&
+              firebaseAndroidAppId.contains(':android:'))) &&
       firebaseApiKey.startsWith('AIza') &&
       firebaseAppId.startsWith('1:') &&
       firebaseProjectId.isNotEmpty &&
@@ -78,14 +83,16 @@ class ApiClient {
     }
     if (!firebaseReady) {
       throw Exception(
-          'Konfigurasi Firebase Web tidak valid. Gunakan apiKey, appId, dan projectId asli dari Firebase Console.');
+          kIsWeb
+              ? 'Konfigurasi Firebase Web tidak valid. Gunakan apiKey, appId, dan projectId asli dari Firebase Console.'
+              : 'Konfigurasi Firebase Android belum lengkap. Daftarkan aplikasi Android di Firebase Console dan jalankan dengan FIREBASE_ANDROID_APP_ID dari Firebase Console. Jangan gunakan API_URL untuk login Firebase.');
     }
     try {
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp(
           options: const FirebaseOptions(
             apiKey: firebaseApiKey,
-            appId: firebaseAppId,
+            appId: kIsWeb ? firebaseAppId : firebaseAndroidAppId,
             messagingSenderId: firebaseMessagingSenderId,
             projectId: firebaseProjectId,
             authDomain: firebaseAuthDomain,
@@ -531,10 +538,12 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+        resizeToAvoidBottomInset: true,
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final wide = constraints.maxWidth >= 900;
+              final wide =
+                  constraints.maxWidth >= 900 && constraints.maxHeight >= 680;
               final intro = Container(
                 height: wide ? 560 : null,
                 padding: EdgeInsets.all(wide ? 40 : 0),
@@ -593,9 +602,8 @@ class _LoginPageState extends State<LoginPage> {
                     Text(
                       'Atur jadwal, tugas, dan catatan dengan tenang.',
                       style: TextStyle(
-                        color: wide
-                            ? Colors.white.withValues(alpha: 0.78)
-                            : muted,
+                        color:
+                            wide ? Colors.white.withValues(alpha: 0.78) : muted,
                         fontSize: 15,
                         height: 1.5,
                       ),
@@ -648,8 +656,7 @@ class _LoginPageState extends State<LoginPage> {
                     if (register) ...[
                       field('Nama lengkap', name, 'Nama kamu',
                           icon: Icons.person_outline),
-                      field('NIM', nim, '20240001',
-                          icon: Icons.badge_outlined),
+                      field('NIM', nim, '20240001', icon: Icons.badge_outlined),
                     ],
                     field('Email', email, 'nama@email.com',
                         icon: Icons.mail_outline),
@@ -664,9 +671,12 @@ class _LoginPageState extends State<LoginPage> {
                           color: coral.withValues(alpha: 0.10),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(
-                          error!,
-                          style: const TextStyle(color: coral, fontSize: 13),
+                        child: Semantics(
+                          liveRegion: true,
+                          child: Text(
+                            error!,
+                            style: const TextStyle(color: coral, fontSize: 13),
+                          ),
                         ),
                       ),
                     SizedBox(
@@ -744,6 +754,15 @@ class _LoginPageState extends State<LoginPage> {
           controller: controller,
           obscureText: obscure,
           keyboardType: label == 'Email' ? TextInputType.emailAddress : null,
+          textInputAction:
+              label == 'Password' ? TextInputAction.done : TextInputAction.next,
+          autofillHints: label == 'Email'
+              ? const [AutofillHints.email]
+              : obscure
+                  ? const [AutofillHints.password]
+                  : null,
+          scrollPadding: const EdgeInsets.only(bottom: 24),
+          onSubmitted: label == 'Password' && !busy ? (_) => submit() : null,
           decoration: InputDecoration(
             labelText: label,
             hintText: hint,
@@ -782,25 +801,22 @@ class _HomePageState extends State<HomePage> {
           icon: Icon(Icons.task_alt_outlined), label: 'Tugas'),
       NavigationDestination(
           icon: Icon(Icons.sticky_note_2_outlined), label: 'Catatan'),
-      NavigationDestination(
-          icon: Icon(Icons.person_outline), label: 'Profil'),
+      NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profil'),
     ];
-      const railDestinations = [
-        NavigationRailDestination(
+    const railDestinations = [
+      NavigationRailDestination(
           icon: Icon(Icons.grid_view_outlined), label: Text('Beranda')),
-        NavigationRailDestination(
+      NavigationRailDestination(
           icon: Icon(Icons.calendar_month_outlined), label: Text('Jadwal')),
-        NavigationRailDestination(
+      NavigationRailDestination(
           icon: Icon(Icons.task_alt_outlined), label: Text('Tugas')),
-        NavigationRailDestination(
+      NavigationRailDestination(
           icon: Icon(Icons.sticky_note_2_outlined), label: Text('Catatan')),
-        NavigationRailDestination(
+      NavigationRailDestination(
           icon: Icon(Icons.person_outline), label: Text('Profil')),
-      ];
-    final firstName = (widget.user['Name'] as String? ?? 'Mahasiswa')
-        .trim()
-        .split(' ')
-        .first;
+    ];
+    final firstName =
+        (widget.user['Name'] as String? ?? 'Mahasiswa').trim().split(' ').first;
 
     return Scaffold(
       body: SafeArea(
@@ -1008,12 +1024,24 @@ class _DashboardState extends State<Dashboard> {
             snapshot.data?['Summary'] as Map<String, dynamic>? ?? {};
         final cards = [
           ('Total tugas', summary['TotalTasks'] ?? 0, Icons.checklist, teal),
-          ('Selesai', summary['TotalCompletedTasks'] ?? 0,
-              Icons.task_alt, const Color(0xff718f50)),
-          ('Berjalan', summary['TotalPendingTasks'] ?? 0,
-              Icons.timelapse, gold),
-          ('Terlambat', summary['TotalOverdueTasks'] ?? 0,
-              Icons.warning_amber_outlined, coral),
+          (
+            'Selesai',
+            summary['TotalCompletedTasks'] ?? 0,
+            Icons.task_alt,
+            const Color(0xff718f50)
+          ),
+          (
+            'Berjalan',
+            summary['TotalPendingTasks'] ?? 0,
+            Icons.timelapse,
+            gold
+          ),
+          (
+            'Terlambat',
+            summary['TotalOverdueTasks'] ?? 0,
+            Icons.warning_amber_outlined,
+            coral
+          ),
         ];
         final todaySchedules =
             snapshot.data?['TodaySchedules'] as List<dynamic>? ?? [];
@@ -1102,9 +1130,8 @@ class _DashboardState extends State<Dashboard> {
                   if (snapshot.hasData) ...[
                     LayoutBuilder(builder: (context, constraints) {
                       final columns = constraints.maxWidth >= 760 ? 4 : 2;
-                      final tileWidth = (constraints.maxWidth -
-                              (columns - 1) * 12) /
-                          columns;
+                      final tileWidth =
+                          (constraints.maxWidth - (columns - 1) * 12) / columns;
                       return Wrap(
                         spacing: 12,
                         runSpacing: 12,
@@ -1416,6 +1443,8 @@ class DataList extends StatefulWidget {
 
 class _DataListState extends State<DataList> {
   late Future<List<dynamic>> future;
+  bool actionInProgress = false;
+
   @override
   void initState() {
     super.initState();
@@ -1431,14 +1460,21 @@ class _DataListState extends State<DataList> {
       context: context,
       builder: (_) => ItemForm(type: widget.type, item: item),
     );
-    if (result == null) return;
+    if (result == null || !mounted) return;
+    setState(() => actionInProgress = true);
     try {
       await widget.client.saveItem(widget.type, result, isNew: item == null);
     } on Exception catch (error) {
       if (mounted) _showError(error);
       return;
+    } finally {
+      if (mounted) setState(() => actionInProgress = false);
     }
-    if (mounted) setState(_reload);
+    if (mounted) {
+      setState(_reload);
+      _showMessage(
+          '${_typeLabel()} berhasil ${item == null ? 'ditambahkan' : 'diperbarui'}.');
+    }
   }
 
   Future<void> _delete(String id) async {
@@ -1457,14 +1493,34 @@ class _DataListState extends State<DataList> {
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
+    setState(() => actionInProgress = true);
     try {
       await widget.client.deleteItem(widget.type, id);
     } on Exception catch (error) {
       if (mounted) _showError(error);
       return;
+    } finally {
+      if (mounted) setState(() => actionInProgress = false);
     }
-    if (mounted) setState(_reload);
+    if (mounted) {
+      setState(_reload);
+      _showMessage('${_typeLabel()} berhasil dihapus.');
+    }
+  }
+
+  String _typeLabel() => switch (widget.type) {
+        'schedules' => 'Jadwal',
+        'tasks' => 'Tugas',
+        'notes' => 'Catatan',
+        _ => 'Data',
+      };
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message),
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   void _showError(Exception error) {
@@ -1480,25 +1536,25 @@ class _DataListState extends State<DataList> {
     final isDone = item['Status'] == 'DONE';
     final isInProgress = item['Status'] == 'IN_PROGRESS';
     final taskInfoTitle = isDone
-      ? 'Tugas sudah dikerjakan'
-      : isInProgress
-        ? 'Tugas sedang dikerjakan'
-        : 'Tugas belum dikerjakan';
+        ? 'Tugas sudah dikerjakan'
+        : isInProgress
+            ? 'Tugas sedang dikerjakan'
+            : 'Tugas belum dikerjakan';
     final taskInfoDetail = isDone
-      ? 'Tugas ini telah ditandai selesai.'
-      : isInProgress
-        ? 'Progres tugas ini sedang berjalan.'
-        : 'Tugas ini masih perlu diselesaikan.';
+        ? 'Tugas ini telah ditandai selesai.'
+        : isInProgress
+            ? 'Progres tugas ini sedang berjalan.'
+            : 'Tugas ini masih perlu diselesaikan.';
     final taskInfoColor = isDone
-      ? teal
-      : isInProgress
-        ? gold
-        : coral;
+        ? teal
+        : isInProgress
+            ? gold
+            : coral;
     final taskInfoIcon = isDone
-      ? Icons.check_circle_outline
-      : isInProgress
-        ? Icons.pending_outlined
-        : Icons.radio_button_unchecked;
+        ? Icons.check_circle_outline
+        : isInProgress
+            ? Icons.pending_outlined
+            : Icons.radio_button_unchecked;
 
     await showDialog<void>(
       context: context,
@@ -1689,7 +1745,10 @@ class _DataListState extends State<DataList> {
                               ]),
                               const SizedBox(height: 10),
                               Text(
-                                (item['Description']?.toString().trim().isNotEmpty ??
+                                (item['Description']
+                                            ?.toString()
+                                            .trim()
+                                            .isNotEmpty ??
                                         false)
                                     ? item['Description'].toString()
                                     : 'Belum ada deskripsi untuk tugas ini.',
@@ -1802,7 +1861,20 @@ class _DataListState extends State<DataList> {
       future: future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: Semantics(
+              liveRegion: true,
+              label: 'Memuat data',
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 12),
+                  Text('Memuat data...'),
+                ],
+              ),
+            ),
+          );
         }
         if (snapshot.hasError) {
           return Center(
@@ -1864,6 +1936,7 @@ class _DataListState extends State<DataList> {
                                     : Icons.schedule,
                             color: teal),
                         trailing: PopupMenuButton<String>(
+                          enabled: !actionInProgress,
                           onSelected: (action) {
                             if (action == 'details') {
                               _showDetails(data);
@@ -1892,7 +1965,7 @@ class _DataListState extends State<DataList> {
               right: 20,
               bottom: 20,
               child: FloatingActionButton.extended(
-                  onPressed: () => _edit(),
+                  onPressed: actionInProgress ? null : () => _edit(),
                   backgroundColor: teal,
                   icon: const Icon(Icons.add),
                   label: Text(widget.type == 'schedules'
@@ -1900,6 +1973,17 @@ class _DataListState extends State<DataList> {
                       : widget.type == 'tasks'
                           ? 'Tugas'
                           : 'Catatan'))),
+          if (actionInProgress)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Semantics(
+                liveRegion: true,
+                label: 'Menyimpan perubahan',
+                child: const LinearProgressIndicator(),
+              ),
+            ),
         ]);
       });
 }
@@ -1994,7 +2078,7 @@ class _ItemFormState extends State<ItemForm> {
     final item = widget.item ?? {};
     fields = {
       for (final key in widget.type == 'schedules'
-        ? ['CourseName', 'Lecturer', 'Room']
+          ? ['CourseName', 'Lecturer', 'Room']
           : widget.type == 'tasks'
               ? ['Title', 'Description']
               : ['Title', 'Content'])
@@ -2061,8 +2145,7 @@ class _ItemFormState extends State<ItemForm> {
       final startMinutes = startTime!.hour * 60 + startTime!.minute;
       final endMinutes = endTime!.hour * 60 + endTime!.minute;
       if (endMinutes <= startMinutes) {
-        setState(
-            () => formError = 'Jam selesai harus setelah jam mulai.');
+        setState(() => formError = 'Jam selesai harus setelah jam mulai.');
         return;
       }
     }
@@ -2160,6 +2243,11 @@ class _ItemFormState extends State<ItemForm> {
                           padding: const EdgeInsets.only(bottom: 12),
                           child: TextField(
                             controller: entry.value,
+                            textInputAction: entry.key == 'Description' ||
+                                    entry.key == 'Content'
+                                ? TextInputAction.newline
+                                : TextInputAction.next,
+                            scrollPadding: const EdgeInsets.only(bottom: 100),
                             onChanged: (_) {
                               if (formError != null) {
                                 setState(() => formError = null);
@@ -2179,7 +2267,8 @@ class _ItemFormState extends State<ItemForm> {
                                   : entry.key == 'Lecturer'
                                       ? const Icon(Icons.person_outline)
                                       : entry.key == 'Room'
-                                          ? const Icon(Icons.location_on_outlined)
+                                          ? const Icon(
+                                              Icons.location_on_outlined)
                                           : null,
                             ),
                           ),
@@ -2192,8 +2281,8 @@ class _ItemFormState extends State<ItemForm> {
                           prefixIcon: Icon(Icons.today_outlined),
                         ),
                         items: days
-                            .map((day) => DropdownMenuItem(
-                                value: day, child: Text(day)))
+                            .map((day) =>
+                                DropdownMenuItem(value: day, child: Text(day)))
                             .toList(),
                         onChanged: (value) => setState(() {
                           selectedDay = value;
@@ -2314,7 +2403,8 @@ class _ItemFormState extends State<ItemForm> {
   }) =>
       Semantics(
         button: true,
-        label: '$label ${value == null ? 'belum dipilih' : value.format(context)}',
+        label:
+            '$label ${value == null ? 'belum dipilih' : value.format(context)}',
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(8),
@@ -2329,7 +2419,8 @@ class _ItemFormState extends State<ItemForm> {
               style: TextStyle(
                   color: value == null ? muted : ink,
                   fontSize: 14,
-                  fontWeight: value == null ? FontWeight.w400 : FontWeight.w600),
+                  fontWeight:
+                      value == null ? FontWeight.w400 : FontWeight.w600),
             ),
           ),
         ),

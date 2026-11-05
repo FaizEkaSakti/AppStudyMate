@@ -1,11 +1,21 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:app_studymate_mobile/main.dart';
 
 void main() {
+  test('Android Firebase requires its registered app id', () {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    expect(ApiClient(apiBaseUrl: '').firebaseReady, isFalse);
+    expect(ApiClient(apiBaseUrl: 'http://localhost:4000/api').firebaseReady,
+        isFalse);
+  });
+
   test('schedule CRUD requests use authenticated REST endpoints', () async {
     final requests = <http.Request>[];
     final client = ApiClient(

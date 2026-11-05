@@ -17,6 +17,48 @@ void main() {
     expect(find.byType(StudyMateApp), findsOneWidget);
   });
 
+  testWidgets('login fields remain reachable when the keyboard is open',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+
+    await tester.pumpWidget(MaterialApp(
+      home: LoginPage(
+        onLogin: (_, __, ___, ____, _____) async {},
+      ),
+    ));
+    await tester.showKeyboard(find.byType(TextField).last);
+    await tester.pumpAndSettle();
+
+    final passwordBox = tester.getRect(find.byType(TextField).last);
+    expect(passwordBox.bottom, lessThanOrEqualTo(500));
+  });
+
+  testWidgets('short desktop viewport uses the keyboard-safe login layout',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1000, 800);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 350);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+
+    await tester.pumpWidget(MaterialApp(
+      home: LoginPage(
+        onLogin: (_, __, ___, ____, _____) async {},
+      ),
+    ));
+    await tester.showKeyboard(find.byType(TextField).last);
+    await tester.pumpAndSettle();
+
+    final passwordBox = tester.getRect(find.byType(TextField).last);
+    expect(passwordBox.bottom, lessThanOrEqualTo(450));
+  });
+
   testWidgets('tapping a task opens its detail popup',
       (WidgetTester tester) async {
     final client = ApiClient();
@@ -120,8 +162,8 @@ void main() {
     await tester.tap(find.text('Simpan'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Lengkapi semua informasi terlebih dahulu.'),
-        findsOneWidget);
+    expect(
+        find.text('Lengkapi semua informasi terlebih dahulu.'), findsOneWidget);
   });
 
   testWidgets('saving an edited task refreshes the list synchronously',
@@ -149,5 +191,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Tugas baru'), findsOneWidget);
+    expect(find.text('Tugas berhasil diperbarui.'), findsOneWidget);
   });
 }
