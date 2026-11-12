@@ -128,5 +128,8 @@ https://docs.google.com/document/d/1-XSxcPn9ruyI5j-tqu9ANmLQ-RVfx2-I1D9Qa1KCLZw/
 Tugas p8
 https://docs.google.com/document/d/1HV6sSE5BubVThiH4S4j_-qrlLzYy_UEi12Vae2N-tVY/edit?usp=sharing
 
+Tugas p9
+https://docs.google.com/document/d/10puPeILgFaFQpBbo72_d0QcQeZNESr_uZWTkYDrixA0/edit?usp=sharing
+
 
 
