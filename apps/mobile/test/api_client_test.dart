@@ -5,8 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:app_studymate_mobile/main.dart';
+import 'package:app_studymate_mobile/profile_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.setMockInitialValues({});
+
   test('Android Firebase requires its registered app id', () {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
@@ -93,5 +98,57 @@ void main() {
         contains('Jadwal tidak ditemukan'),
       )),
     );
+  });
+
+  test('profile repository updates the authenticated profile endpoint',
+      () async {
+    final requests = <http.Request>[];
+    final client = ApiClient(
+      apiBaseUrl: 'http://localhost:4000/api',
+      httpClient: MockClient((request) async {
+        requests.add(request);
+        return http.Response(
+          '{"Id":"user-1","Name":"Ani Putri","Email":"ani@example.com","Nim":"123456"}',
+          200,
+        );
+      }),
+    )..token = 'test-token';
+    final repository = ProfileRepository(request: client.request);
+
+    final updatedUser = await repository.updateProfile(
+      name: ' Ani Putri ',
+      email: ' ANI@EXAMPLE.COM ',
+      nim: ' 123456 ',
+    );
+
+    expect(updatedUser['Name'], 'Ani Putri');
+    expect(requests.single.method, 'PUT');
+    expect(requests.single.url.path, '/api/profile');
+    expect(requests.single.headers['authorization'], 'Bearer test-token');
+    expect(
+      jsonDecode(requests.single.body),
+      {'Name': 'Ani Putri', 'Email': 'ani@example.com', 'Nim': '123456'},
+    );
+  });
+
+  test('profile repository updates the local user profile', () async {
+    final client = ApiClient(apiBaseUrl: '')
+      ..localUser = {
+        'Id': 'local-user',
+        'Name': 'Ani',
+        'Email': 'ani@example.com',
+        'Nim': '123',
+      };
+    final repository = ProfileRepository(request: client.request);
+
+    final updatedUser = await repository.updateProfile(
+      name: 'Ani Putri',
+      email: 'ani@example.com',
+      nim: '123456',
+    );
+
+    expect(updatedUser['Name'], 'Ani Putri');
+    expect(updatedUser['Nim'], '123456');
+    expect(client.localUser?['Name'], 'Ani Putri');
   });
 }

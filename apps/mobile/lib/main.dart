@@ -9,6 +9,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dashboard_data.dart';
+import 'profile_form.dart';
+import 'profile_repository.dart';
 import 'theme/app_theme.dart';
 
 const apiUrl = String.fromEnvironment('API_URL');
@@ -16,8 +18,7 @@ const firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY',
     defaultValue: 'AIzaSyBsTO332dtvoRfqy321FASqDhTeFzUD6Xc');
 const firebaseAppId = String.fromEnvironment('FIREBASE_APP_ID',
     defaultValue: '1:185834578847:web:cb2cf16c3fede5f25353aa');
-const firebaseAndroidAppId =
-    String.fromEnvironment('FIREBASE_ANDROID_APP_ID');
+const firebaseAndroidAppId = String.fromEnvironment('FIREBASE_ANDROID_APP_ID');
 const firebaseMessagingSenderId = String.fromEnvironment(
     'FIREBASE_MESSAGING_SENDER_ID',
     defaultValue: '185834578847');
@@ -82,10 +83,9 @@ class ApiClient {
       return;
     }
     if (!firebaseReady) {
-      throw Exception(
-          kIsWeb
-              ? 'Konfigurasi Firebase Web tidak valid. Gunakan apiKey, appId, dan projectId asli dari Firebase Console.'
-              : 'Konfigurasi Firebase Android belum lengkap. Daftarkan aplikasi Android di Firebase Console dan jalankan dengan FIREBASE_ANDROID_APP_ID dari Firebase Console. Jangan gunakan API_URL untuk login Firebase.');
+      throw Exception(kIsWeb
+          ? 'Konfigurasi Firebase Web tidak valid. Gunakan apiKey, appId, dan projectId asli dari Firebase Console.'
+          : 'Konfigurasi Firebase Android belum lengkap. Daftarkan aplikasi Android di Firebase Console dan jalankan dengan FIREBASE_ANDROID_APP_ID dari Firebase Console. Jangan gunakan API_URL untuk login Firebase.');
     }
     try {
       if (Firebase.apps.isEmpty) {
@@ -177,6 +177,29 @@ class ApiClient {
       return {
         'Token': await user.getIdToken() ?? '',
         'User': {'Id': user.uid, 'Name': name, 'Email': email, 'Nim': nim}
+      };
+    }
+
+    if (path == '/profile' && method == 'PUT') {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('Sesi Firebase tidak ditemukan');
+      final name = body?['Name']?.toString().trim() ?? '';
+      final nim = body?['Nim']?.toString().trim() ?? '';
+      await user.updateDisplayName(name);
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
+        {
+          'UserId': user.uid,
+          'Name': name,
+          'Email': user.email ?? '',
+          'Nim': nim
+        },
+        SetOptions(merge: true),
+      );
+      return {
+        'Id': user.uid,
+        'Name': name,
+        'Email': user.email ?? '',
+        'Nim': nim
       };
     }
 
@@ -331,6 +354,22 @@ class ApiClient {
 
   Future<dynamic> localRequest(String path,
       {Map<String, dynamic>? body}) async {
+    if (path == '/profile' && body != null) {
+      if (localUser == null) throw Exception('Sesi pengguna tidak ditemukan');
+      final updatedUser = {
+        ...localUser!,
+        'Name': body['Name']?.toString().trim() ?? '',
+        'Nim': body['Nim']?.toString().trim() ?? '',
+      };
+      final userIndex =
+          localUsers.indexWhere((account) => account['Id'] == localUser!['Id']);
+      if (userIndex != -1) localUsers[userIndex] = updatedUser;
+      localUser = updatedUser;
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString('local_user', jsonEncode(localUser));
+      await preferences.setString('local_users', jsonEncode(localUsers));
+      return localUser;
+    }
     if (path == '/auth/register') {
       final email = body?['Email']?.toString().trim().toLowerCase() ?? '';
       if (localUsers.any((account) => account['Email'] == email)) {
@@ -483,6 +522,12 @@ class _SessionGateState extends State<SessionGate> {
     return HomePage(
         client: client,
         user: user!,
+        onUserUpdated: (updatedUser) async {
+          final preferences = await SharedPreferences.getInstance();
+          await preferences.setString(
+              client.apiEnabled ? 'api_user' : 'user', jsonEncode(updatedUser));
+          if (mounted) setState(() => user = updatedUser);
+        },
         onLogout: () async {
           if (client.firebaseReady) {
             await FirebaseAuth.instance.signOut();
@@ -776,10 +821,12 @@ class HomePage extends StatefulWidget {
   const HomePage(
       {required this.client,
       required this.user,
+      required this.onUserUpdated,
       required this.onLogout,
       super.key});
   final ApiClient client;
   final Map<String, dynamic> user;
+  final Future<void> Function(Map<String, dynamic> user) onUserUpdated;
   final VoidCallback onLogout;
 
   @override
@@ -834,7 +881,13 @@ class _HomePageState extends State<HomePage> {
                 DataList(client: widget.client, type: 'schedules'),
                 DataList(client: widget.client, type: 'tasks'),
                 DataList(client: widget.client, type: 'notes'),
-                Profile(user: widget.user, onLogout: widget.onLogout),
+                ProfileForm(
+                  user: widget.user,
+                  repository: ProfileRepository(request: widget.client.request),
+                  canEditEmail: widget.client.apiEnabled,
+                  onUserSaved: widget.onUserUpdated,
+                  onLogout: widget.onLogout,
+                ),
               ],
             );
 
@@ -2463,32 +2516,3 @@ String fieldLabel(String key) => switch (key) {
       'Content' => 'Isi catatan',
       _ => 'Judul',
     };
-
-class Profile extends StatelessWidget {
-  const Profile({required this.user, required this.onLogout, super.key});
-  final Map<String, dynamic> user;
-  final VoidCallback onLogout;
-  @override
-  Widget build(BuildContext context) =>
-      ListView(padding: const EdgeInsets.all(24), children: [
-        CircleAvatar(
-            radius: 34,
-            backgroundColor: teal,
-            child: Text(
-                (user['Name'] as String? ?? 'A').substring(0, 1).toUpperCase(),
-                style: const TextStyle(color: Colors.white, fontSize: 26))),
-        const SizedBox(height: 16),
-        Center(
-            child: Text(user['Name']?.toString() ?? '',
-                style: const TextStyle(
-                    color: ink, fontWeight: FontWeight.w800, fontSize: 22))),
-        Center(
-            child: Text(user['Email']?.toString() ?? '',
-                style: const TextStyle(color: muted))),
-        const SizedBox(height: 28),
-        OutlinedButton.icon(
-            onPressed: onLogout,
-            icon: const Icon(Icons.logout),
-            label: const Text('Keluar'))
-      ]);
-}
