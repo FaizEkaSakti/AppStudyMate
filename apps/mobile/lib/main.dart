@@ -28,6 +28,16 @@ const firebaseAuthDomain = String.fromEnvironment('FIREBASE_AUTH_DOMAIN',
     defaultValue: 'appstudymate-13de0.firebaseapp.com');
 const firebaseStorageBucket = String.fromEnvironment('FIREBASE_STORAGE_BUCKET',
     defaultValue: 'appstudymate-13de0.firebasestorage.app');
+const _weekdays = [
+  'Senin',
+  'Selasa',
+  'Rabu',
+  'Kamis',
+  'Jumat',
+  'Sabtu',
+  'Minggu',
+];
+
 void main() => runApp(const StudyMateApp());
 
 class StudyMateApp extends StatelessWidget {
@@ -834,34 +844,27 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static const _navigationItems = [
+    (title: 'Dashboard', label: 'Beranda', icon: Icons.grid_view_outlined),
+    (title: 'Jadwal', label: 'Jadwal', icon: Icons.calendar_month_outlined),
+    (title: 'Tugas', label: 'Tugas', icon: Icons.task_alt_outlined),
+    (title: 'Catatan', label: 'Catatan', icon: Icons.sticky_note_2_outlined),
+    (title: 'Profil', label: 'Profil', icon: Icons.person_outline),
+  ];
+
   int tab = 0;
-  final titles = const ['Dashboard', 'Jadwal', 'Tugas', 'Catatan', 'Profil'];
 
   @override
   Widget build(BuildContext context) {
-    const destinations = [
-      NavigationDestination(
-          icon: Icon(Icons.grid_view_outlined), label: 'Beranda'),
-      NavigationDestination(
-          icon: Icon(Icons.calendar_month_outlined), label: 'Jadwal'),
-      NavigationDestination(
-          icon: Icon(Icons.task_alt_outlined), label: 'Tugas'),
-      NavigationDestination(
-          icon: Icon(Icons.sticky_note_2_outlined), label: 'Catatan'),
-      NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profil'),
-    ];
-    const railDestinations = [
-      NavigationRailDestination(
-          icon: Icon(Icons.grid_view_outlined), label: Text('Beranda')),
-      NavigationRailDestination(
-          icon: Icon(Icons.calendar_month_outlined), label: Text('Jadwal')),
-      NavigationRailDestination(
-          icon: Icon(Icons.task_alt_outlined), label: Text('Tugas')),
-      NavigationRailDestination(
-          icon: Icon(Icons.sticky_note_2_outlined), label: Text('Catatan')),
-      NavigationRailDestination(
-          icon: Icon(Icons.person_outline), label: Text('Profil')),
-    ];
+    final titles = _navigationItems.map((item) => item.title).toList();
+    final destinations = _navigationItems
+        .map((item) =>
+            NavigationDestination(icon: Icon(item.icon), label: item.label))
+        .toList();
+    final railDestinations = _navigationItems
+        .map((item) => NavigationRailDestination(
+            icon: Icon(item.icon), label: Text(item.label)))
+        .toList();
     final firstName =
         (widget.user['Name'] as String? ?? 'Mahasiswa').trim().split(' ').first;
 
@@ -951,17 +954,7 @@ class _HomePageState extends State<HomePage> {
                         Padding(
                           padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
                           child: Row(children: [
-                            CircleAvatar(
-                              radius: 18,
-                              backgroundColor: leaf.withValues(alpha: 0.35),
-                              child: Text(
-                                firstName.isEmpty
-                                    ? 'S'
-                                    : firstName[0].toUpperCase(),
-                                style: const TextStyle(
-                                    color: teal, fontWeight: FontWeight.w800),
-                              ),
-                            ),
+                            _userAvatar(firstName, radius: 18),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(firstName,
@@ -995,17 +988,7 @@ class _HomePageState extends State<HomePage> {
                                   fontWeight: FontWeight.w700,
                                   fontFamily: 'Georgia')),
                           const Spacer(),
-                          CircleAvatar(
-                            radius: 17,
-                            backgroundColor: leaf.withValues(alpha: 0.35),
-                            child: Text(
-                              firstName.isEmpty
-                                  ? 'S'
-                                  : firstName[0].toUpperCase(),
-                              style: const TextStyle(
-                                  color: teal, fontWeight: FontWeight.w800),
-                            ),
-                          ),
+                          _userAvatar(firstName, radius: 17),
                           if (!wide) ...[
                             const SizedBox(width: 9),
                             Text(firstName,
@@ -1034,6 +1017,16 @@ class _HomePageState extends State<HomePage> {
             ),
     );
   }
+
+  Widget _userAvatar(String firstName, {required double radius}) =>
+      CircleAvatar(
+        radius: radius,
+        backgroundColor: leaf.withValues(alpha: 0.35),
+        child: Text(
+          firstName.isEmpty ? 'S' : firstName[0].toUpperCase(),
+          style: const TextStyle(color: teal, fontWeight: FontWeight.w800),
+        ),
+      );
 }
 
 class Dashboard extends StatefulWidget {
@@ -1303,14 +1296,16 @@ class _DashboardState extends State<Dashboard> {
         ]),
       );
 
+  BoxDecoration get _dashboardCardDecoration => BoxDecoration(
+        color: paper,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: line),
+      );
+
   Widget _scheduleTile(Map<String, dynamic> schedule) => Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: paper,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: line),
-        ),
+        decoration: _dashboardCardDecoration,
         child: Row(children: [
           Container(
             width: 44,
@@ -1346,11 +1341,7 @@ class _DashboardState extends State<Dashboard> {
   Widget _taskTile(Map<String, dynamic> task) => Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: paper,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: line),
-        ),
+        decoration: _dashboardCardDecoration,
         child: Row(children: [
           Container(
             width: 4,
@@ -1458,15 +1449,6 @@ class _DashboardState extends State<Dashboard> {
 }
 
 String _todayLabel() {
-  const weekdays = [
-    'Senin',
-    'Selasa',
-    'Rabu',
-    'Kamis',
-    'Jumat',
-    'Sabtu',
-    'Minggu',
-  ];
   const months = [
     'Januari',
     'Februari',
@@ -1482,7 +1464,7 @@ String _todayLabel() {
     'Desember',
   ];
   final now = DateTime.now();
-  return '${weekdays[now.weekday - 1]}, ${now.day} ${months[now.month - 1]} ${now.year}';
+  return '${_weekdays[now.weekday - 1]}, ${now.day} ${months[now.month - 1]} ${now.year}';
 }
 
 class DataList extends StatefulWidget {
@@ -1508,15 +1490,11 @@ class _DataListState extends State<DataList> {
     future = widget.client.list('/${widget.type}');
   }
 
-  Future<void> _edit([Map<String, dynamic>? item]) async {
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => ItemForm(type: widget.type, item: item),
-    );
-    if (result == null || !mounted) return;
+  Future<void> _performAction(
+      Future<void> Function() action, String successMessage) async {
     setState(() => actionInProgress = true);
     try {
-      await widget.client.saveItem(widget.type, result, isNew: item == null);
+      await action();
     } on Exception catch (error) {
       if (mounted) _showError(error);
       return;
@@ -1525,9 +1503,20 @@ class _DataListState extends State<DataList> {
     }
     if (mounted) {
       setState(_reload);
-      _showMessage(
-          '${_typeLabel()} berhasil ${item == null ? 'ditambahkan' : 'diperbarui'}.');
+      _showMessage(successMessage);
     }
+  }
+
+  Future<void> _edit([Map<String, dynamic>? item]) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => ItemForm(type: widget.type, item: item),
+    );
+    if (result == null || !mounted) return;
+    await _performAction(
+      () => widget.client.saveItem(widget.type, result, isNew: item == null),
+      '${_typeLabel()} berhasil ${item == null ? 'ditambahkan' : 'diperbarui'}.',
+    );
   }
 
   Future<void> _delete(String id) async {
@@ -1547,19 +1536,10 @@ class _DataListState extends State<DataList> {
       ),
     );
     if (confirmed != true || !mounted) return;
-    setState(() => actionInProgress = true);
-    try {
-      await widget.client.deleteItem(widget.type, id);
-    } on Exception catch (error) {
-      if (mounted) _showError(error);
-      return;
-    } finally {
-      if (mounted) setState(() => actionInProgress = false);
-    }
-    if (mounted) {
-      setState(_reload);
-      _showMessage('${_typeLabel()} berhasil dihapus.');
-    }
+    await _performAction(
+      () => widget.client.deleteItem(widget.type, id),
+      '${_typeLabel()} berhasil dihapus.',
+    );
   }
 
   String _typeLabel() => switch (widget.type) {
@@ -2107,16 +2087,6 @@ class ItemForm extends StatefulWidget {
 }
 
 class _ItemFormState extends State<ItemForm> {
-  static const days = [
-    'Senin',
-    'Selasa',
-    'Rabu',
-    'Kamis',
-    'Jumat',
-    'Sabtu',
-    'Minggu',
-  ];
-
   late final Map<String, TextEditingController> fields;
   late String status;
   DateTime? deadline;
@@ -2140,7 +2110,7 @@ class _ItemFormState extends State<ItemForm> {
     status = item['Status']?.toString() ?? 'TODO';
     deadline = DateTime.tryParse(item['Deadline']?.toString() ?? '');
     final savedDay = item['Day']?.toString();
-    selectedDay = days.contains(savedDay) ? savedDay : null;
+    selectedDay = _weekdays.contains(savedDay) ? savedDay : null;
     startTime = _parseTime(item['StartTime']?.toString());
     endTime = _parseTime(item['EndTime']?.toString());
   }
@@ -2333,7 +2303,7 @@ class _ItemFormState extends State<ItemForm> {
                           labelText: 'Hari kuliah',
                           prefixIcon: Icon(Icons.today_outlined),
                         ),
-                        items: days
+                        items: _weekdays
                             .map((day) =>
                                 DropdownMenuItem(value: day, child: Text(day)))
                             .toList(),
