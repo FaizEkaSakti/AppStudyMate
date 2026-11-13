@@ -4,6 +4,9 @@ typedef ProfileRequest = Future<dynamic> Function(
   Map<String, dynamic>? body,
 });
 
+String normalizeProfileText(Object? value) =>
+    value?.toString().trim() ?? '';
+
 class ProfileRepository {
   const ProfileRepository({required ProfileRequest request})
       : _request = request;
@@ -19,9 +22,9 @@ class ProfileRepository {
       '/profile',
       method: 'PUT',
       body: {
-        'Name': name.trim(),
+        'Name': normalizeProfileText(name),
         'Email': email.trim().toLowerCase(),
-        'Nim': nim.trim(),
+        'Nim': normalizeProfileText(nim),
       },
     );
     if (result is! Map<String, dynamic>) {

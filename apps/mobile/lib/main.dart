@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'dashboard_data.dart';
+import 'error_message.dart';
 import 'profile_form.dart';
 import 'profile_repository.dart';
 import 'theme/app_theme.dart';
@@ -68,6 +69,41 @@ class ApiClient {
     'tasks': [],
     'notes': [],
   };
+
+  Map<String, dynamic> _userData({
+    required String id,
+    required Object? name,
+    required Object? email,
+    required Object? nim,
+  }) =>
+      {'Id': id, 'Name': name, 'Email': email, 'Nim': nim};
+
+  Map<String, dynamic> _firestoreProfileData(Map<String, dynamic> userData) {
+    final profile = Map<String, dynamic>.from(userData)..remove('Id');
+    return {'UserId': userData['Id'], ...profile};
+  }
+
+  Future<Map<String, dynamic>> _firebaseUserData(
+    User user, {
+    required String fallbackEmail,
+  }) async {
+    final profile = await _findProfile(user, fallbackEmail);
+    return _userData(
+      id: user.uid,
+      name: profile['Name'] ?? user.displayName ?? 'User',
+      email: user.email ?? fallbackEmail,
+      nim: profile['Nim'] ?? '',
+    );
+  }
+
+  Future<void> _persistLocalUser({bool includeUsers = false}) async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString('local_user', jsonEncode(localUser));
+    if (includeUsers) {
+      await preferences.setString('local_users', jsonEncode(localUsers));
+    }
+  }
+
   bool get apiEnabled => _apiBaseUrl.trim().isNotEmpty;
   bool get firebaseConfigProvided =>
       firebaseApiKey.isNotEmpty ||
@@ -152,15 +188,9 @@ class ApiClient {
       if (user == null) {
         throw Exception('Firebase tidak mengembalikan user setelah login');
       }
-      final profile = await _findProfile(user, email);
       return {
         'Token': await user.getIdToken() ?? '',
-        'User': {
-          'Id': user.uid,
-          'Name': profile['Name'] ?? user.displayName ?? 'User',
-          'Email': user.email ?? email,
-          'Nim': profile['Nim'] ?? ''
-        }
+        'User': await _firebaseUserData(user, fallbackEmail: email),
       };
     }
 
@@ -174,43 +204,38 @@ class ApiClient {
         throw Exception(
             'Firebase tidak mengembalikan user setelah pendaftaran');
       }
-      final name = (body['Name'] as String? ?? 'User').trim();
-      final nim = (body['Nim'] as String? ?? '').trim();
+      final name = normalizeProfileText(body['Name'] as String? ?? 'User');
+      final nim = normalizeProfileText(body['Nim']);
       await user.updateDisplayName(name);
+      final userData =
+          _userData(id: user.uid, name: name, email: email, nim: nim);
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'UserId': user.uid,
-        'Name': name,
-        'Email': email,
-        'Nim': nim,
+        ..._firestoreProfileData(userData),
         'CreatedAt': FieldValue.serverTimestamp(),
       });
       return {
         'Token': await user.getIdToken() ?? '',
-        'User': {'Id': user.uid, 'Name': name, 'Email': email, 'Nim': nim}
+        'User': userData,
       };
     }
 
     if (path == '/profile' && method == 'PUT') {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('Sesi Firebase tidak ditemukan');
-      final name = body?['Name']?.toString().trim() ?? '';
-      final nim = body?['Nim']?.toString().trim() ?? '';
+      final name = normalizeProfileText(body?['Name']);
+      final nim = normalizeProfileText(body?['Nim']);
       await user.updateDisplayName(name);
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
-        {
-          'UserId': user.uid,
-          'Name': name,
-          'Email': user.email ?? '',
-          'Nim': nim
-        },
-        SetOptions(merge: true),
+      final userData = _userData(
+        id: user.uid,
+        name: name,
+        email: user.email ?? '',
+        nim: nim,
       );
-      return {
-        'Id': user.uid,
-        'Name': name,
-        'Email': user.email ?? '',
-        'Nim': nim
-      };
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).set(
+            _firestoreProfileData(userData),
+            SetOptions(merge: true),
+          );
+      return userData;
     }
 
     if (path == '/dashboard') {
@@ -275,13 +300,10 @@ class ApiClient {
   Future<Map<String, dynamic>> firebaseUser() async {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return {};
-    final profile = await _findProfile(currentUser, currentUser.email ?? '');
-    return {
-      'Id': currentUser.uid,
-      'Name': profile['Name'] ?? currentUser.displayName ?? 'User',
-      'Email': currentUser.email ?? '',
-      'Nim': profile['Nim'] ?? ''
-    };
+    return _firebaseUserData(
+      currentUser,
+      fallbackEmail: currentUser.email ?? '',
+    );
   }
 
   Future<Map<String, dynamic>> _findProfile(User user, String email) async {
@@ -368,16 +390,14 @@ class ApiClient {
       if (localUser == null) throw Exception('Sesi pengguna tidak ditemukan');
       final updatedUser = {
         ...localUser!,
-        'Name': body['Name']?.toString().trim() ?? '',
-        'Nim': body['Nim']?.toString().trim() ?? '',
+        'Name': normalizeProfileText(body['Name']),
+        'Nim': normalizeProfileText(body['Nim']),
       };
       final userIndex =
           localUsers.indexWhere((account) => account['Id'] == localUser!['Id']);
       if (userIndex != -1) localUsers[userIndex] = updatedUser;
       localUser = updatedUser;
-      final preferences = await SharedPreferences.getInstance();
-      await preferences.setString('local_user', jsonEncode(localUser));
-      await preferences.setString('local_users', jsonEncode(localUsers));
+      await _persistLocalUser(includeUsers: true);
       return localUser;
     }
     if (path == '/auth/register') {
@@ -393,9 +413,7 @@ class ApiClient {
         'Password': body?['Password'] ?? ''
       };
       localUsers.add(localUser!);
-      final preferences = await SharedPreferences.getInstance();
-      await preferences.setString('local_user', jsonEncode(localUser));
-      await preferences.setString('local_users', jsonEncode(localUsers));
+      await _persistLocalUser(includeUsers: true);
       return {'Token': 'local-token', 'User': localUser};
     }
     if (path == '/auth/login') {
@@ -406,8 +424,7 @@ class ApiClient {
           orElse: () => null);
       if (account == null) throw Exception('Email atau password salah');
       localUser = account;
-      final preferences = await SharedPreferences.getInstance();
-      await preferences.setString('local_user', jsonEncode(localUser));
+      await _persistLocalUser();
       return {'Token': 'local-token', 'User': localUser};
     }
     if (path == '/dashboard') {
@@ -434,6 +451,8 @@ class _SessionGateState extends State<SessionGate> {
   Map<String, dynamic>? user;
   bool loading = true;
   String? startupError;
+
+  String get _userStorageKey => client.apiEnabled ? 'api_user' : 'user';
 
   @override
   void initState() {
@@ -469,7 +488,7 @@ class _SessionGateState extends State<SessionGate> {
         }
       }
     } catch (exception) {
-      startupError = exception.toString().replaceFirst('Exception: ', '');
+      startupError = formatErrorMessage(exception);
     }
     if (mounted) setState(() => loading = false);
   }
@@ -486,7 +505,7 @@ class _SessionGateState extends State<SessionGate> {
     user = result['User'] as Map<String, dynamic>;
     final preferences = await SharedPreferences.getInstance();
     final tokenKey = client.apiEnabled ? 'api_token' : 'token';
-    final userKey = client.apiEnabled ? 'api_user' : 'user';
+    final userKey = _userStorageKey;
     await preferences.setString(tokenKey, client.token!);
     await preferences.setString(userKey, jsonEncode(user));
     if (mounted) setState(() {});
@@ -534,8 +553,7 @@ class _SessionGateState extends State<SessionGate> {
         user: user!,
         onUserUpdated: (updatedUser) async {
           final preferences = await SharedPreferences.getInstance();
-          await preferences.setString(
-              client.apiEnabled ? 'api_user' : 'user', jsonEncode(updatedUser));
+          await preferences.setString(_userStorageKey, jsonEncode(updatedUser));
           if (mounted) setState(() => user = updatedUser);
         },
         onLogout: () async {
@@ -583,8 +601,7 @@ class _LoginPageState extends State<LoginPage> {
           email.text, password.text, register, name.text, nim.text);
     } catch (exception) {
       if (mounted) {
-        setState(
-            () => error = exception.toString().replaceFirst('Exception: ', ''));
+        setState(() => error = formatErrorMessage(exception));
       }
     } finally {
       if (mounted) setState(() => busy = false);
@@ -1557,7 +1574,7 @@ class _DataListState extends State<DataList> {
   }
 
   void _showError(Exception error) {
-    final message = error.toString().replaceFirst('Exception: ', '').trim();
+    final message = formatErrorMessage(error).trim();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(message.isEmpty ? 'Permintaan gagal. Coba lagi.' : message),
     ));

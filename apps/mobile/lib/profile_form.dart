@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'error_message.dart';
 import 'profile_repository.dart';
 import 'profile_validation.dart';
 import 'theme/app_theme.dart';
@@ -36,12 +37,16 @@ class _ProfileFormState extends State<ProfileForm> {
   @override
   void initState() {
     super.initState();
-    _nameController =
-        TextEditingController(text: widget.user['Name']?.toString() ?? '');
-    _emailController =
-        TextEditingController(text: widget.user['Email']?.toString() ?? '');
-    _nimController =
-        TextEditingController(text: widget.user['Nim']?.toString() ?? '');
+    _nameController = TextEditingController();
+    _emailController = TextEditingController();
+    _nimController = TextEditingController();
+    _setUserFields(widget.user);
+  }
+
+  void _setUserFields(Map<String, dynamic> user) {
+    _nameController.text = user['Name']?.toString() ?? '';
+    _emailController.text = user['Email']?.toString() ?? '';
+    _nimController.text = user['Nim']?.toString() ?? '';
   }
 
   @override
@@ -69,15 +74,12 @@ class _ProfileFormState extends State<ProfileForm> {
       await widget.onUserSaved(updatedUser);
       if (!mounted) return;
       setState(() {
-        _nameController.text = updatedUser['Name']?.toString() ?? '';
-        _emailController.text = updatedUser['Email']?.toString() ?? '';
-        _nimController.text = updatedUser['Nim']?.toString() ?? '';
+        _setUserFields(updatedUser);
         _success = 'Profil berhasil diperbarui.';
       });
     } on Exception catch (exception) {
       if (mounted) {
-        setState(() =>
-            _error = exception.toString().replaceFirst('Exception: ', ''));
+        setState(() => _error = formatErrorMessage(exception));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -144,26 +146,9 @@ class _ProfileFormState extends State<ProfileForm> {
                 decoration: const InputDecoration(labelText: 'NIM'),
                 validator: validateProfileNim,
               ),
-              if (_error != null) ...[
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    _error!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                ),
-              ],
-              if (_success != null) ...[
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    _success!,
-                    style: const TextStyle(color: teal),
-                  ),
-                ),
-              ],
+              if (_error != null)
+                _statusMessage(_error!, Colors.red),
+              if (_success != null) _statusMessage(_success!, teal),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
@@ -193,4 +178,12 @@ class _ProfileFormState extends State<ProfileForm> {
       ],
     );
   }
+
+  Widget _statusMessage(String message, Color color) => Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(message, style: TextStyle(color: color)),
+        ),
+      );
 }
