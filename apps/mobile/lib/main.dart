@@ -12,6 +12,7 @@ import 'dashboard_data.dart';
 import 'error_message.dart';
 import 'profile_form.dart';
 import 'profile_repository.dart';
+import 'profile_validation.dart';
 import 'theme/app_theme.dart';
 
 const apiUrl = String.fromEnvironment('API_URL');
@@ -195,7 +196,7 @@ class ApiClient {
     }
 
     if (path == '/auth/register') {
-      final email = (body!['Email'] as String? ?? '').trim().toLowerCase();
+      final email = normalizeProfileEmail(body!['Email'] as String?) ?? '';
       final password = body['Password'] as String? ?? '';
       final userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
@@ -401,7 +402,7 @@ class ApiClient {
       return localUser;
     }
     if (path == '/auth/register') {
-      final email = body?['Email']?.toString().trim().toLowerCase() ?? '';
+      final email = normalizeProfileEmail(body?['Email']) ?? '';
       if (localUsers.any((account) => account['Email'] == email)) {
         throw Exception('Email sudah terdaftar');
       }
@@ -417,7 +418,7 @@ class ApiClient {
       return {'Token': 'local-token', 'User': localUser};
     }
     if (path == '/auth/login') {
-      final email = body?['Email']?.toString().trim().toLowerCase();
+      final email = normalizeProfileEmail(body?['Email']);
       final account = localUsers.cast<Map<String, dynamic>?>().firstWhere(
           (item) =>
               item?['Email'] == email && item?['Password'] == body?['Password'],

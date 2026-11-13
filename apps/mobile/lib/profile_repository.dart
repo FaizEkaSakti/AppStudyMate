@@ -1,11 +1,10 @@
+import 'profile_validation.dart';
+
 typedef ProfileRequest = Future<dynamic> Function(
   String path, {
   String method,
   Map<String, dynamic>? body,
 });
-
-String normalizeProfileText(Object? value) =>
-    value?.toString().trim() ?? '';
 
 class ProfileRepository {
   const ProfileRepository({required ProfileRequest request})
@@ -23,7 +22,7 @@ class ProfileRepository {
       method: 'PUT',
       body: {
         'Name': normalizeProfileText(name),
-        'Email': email.trim().toLowerCase(),
+        'Email': normalizeProfileEmail(email) ?? '',
         'Nim': normalizeProfileText(nim),
       },
     );

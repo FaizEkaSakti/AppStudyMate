@@ -1,3 +1,9 @@
+String normalizeProfileText(Object? value) =>
+    value?.toString().trim() ?? '';
+
+String? normalizeProfileEmail(Object? value) =>
+    value?.toString().trim().toLowerCase();
+
 String? validateProfileName(String? value) {
   if ((value ?? '').trim().length < 2) {
     return 'Nama minimal 2 karakter.';
