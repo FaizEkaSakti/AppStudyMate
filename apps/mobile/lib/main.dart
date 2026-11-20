@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'app_logger.dart';
 import 'dashboard_data.dart';
 import 'error_message.dart';
 import 'profile_form.dart';
@@ -40,7 +41,23 @@ const _weekdays = [
   'Minggu',
 ];
 
-void main() => runApp(const StudyMateApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    AppLogger.error(
+      'flutter_framework_error',
+      details.exception,
+      details.stack ?? StackTrace.current,
+    );
+  };
+  PlatformDispatcher.instance.onError = (error, stackTrace) {
+    AppLogger.error('uncaught_async_error', error, stackTrace);
+    return false;
+  };
+  AppLogger.info('app_started');
+  runApp(const StudyMateApp());
+}
 
 class StudyMateApp extends StatelessWidget {
   const StudyMateApp({super.key});
@@ -270,32 +287,57 @@ class ApiClient {
 
   Future<dynamic> _apiRequest(String path,
       {required String method, Map<String, dynamic>? body}) async {
+    final endpoint = AppLogger.routeGroup(path);
+    final stopwatch = Stopwatch()..start();
+    int? statusCode;
+    AppLogger.info('api_request_started', context: {
+      'endpoint': endpoint,
+      'method': method,
+    });
     final configuredApiUrl = _apiBaseUrl.trim();
     final baseUrl = configuredApiUrl.endsWith('/')
         ? configuredApiUrl
         : '$configuredApiUrl/';
-    final endpoint = Uri.parse(baseUrl)
-        .resolve(path.startsWith('/') ? path.substring(1) : path);
-    final headers = <String, String>{'Accept': 'application/json'};
-    if (body != null) headers['Content-Type'] = 'application/json';
-    if (token != null && !path.startsWith('/auth/')) {
-      headers['Authorization'] = 'Bearer $token';
-    }
+    try {
+      final requestUri = Uri.parse(baseUrl)
+          .resolve(path.startsWith('/') ? path.substring(1) : path);
+      final headers = <String, String>{'Accept': 'application/json'};
+      if (body != null) headers['Content-Type'] = 'application/json';
+      if (token != null && !path.startsWith('/auth/')) {
+        headers['Authorization'] = 'Bearer $token';
+      }
 
-    final response = await _httpClient
-        .send(http.Request(method, endpoint)
-          ..headers.addAll(headers)
-          ..body = body == null ? '' : jsonEncode(body))
-        .then(http.Response.fromStream)
-        .timeout(const Duration(seconds: 15));
-    final result = response.body.isEmpty ? null : jsonDecode(response.body);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      final message =
-          result is Map<String, dynamic> ? result['Message']?.toString() : null;
-      throw Exception(
-          message ?? 'Permintaan API gagal (HTTP ${response.statusCode})');
+      final response = await _httpClient
+          .send(http.Request(method, requestUri)
+            ..headers.addAll(headers)
+            ..body = body == null ? '' : jsonEncode(body))
+          .then(http.Response.fromStream)
+          .timeout(const Duration(seconds: 15));
+      statusCode = response.statusCode;
+      final result = response.body.isEmpty ? null : jsonDecode(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        final message = result is Map<String, dynamic>
+            ? result['Message']?.toString()
+            : null;
+        throw Exception(
+            message ?? 'Permintaan API gagal (HTTP ${response.statusCode})');
+      }
+      AppLogger.info('api_request_succeeded', context: {
+        'endpoint': endpoint,
+        'method': method,
+        'statusCode': response.statusCode,
+        'durationMs': stopwatch.elapsedMilliseconds,
+      });
+      return result;
+    } catch (error, stackTrace) {
+      AppLogger.error('api_request_failed', error, stackTrace, context: {
+        'endpoint': endpoint,
+        'method': method,
+        if (statusCode != null) 'statusCode': statusCode,
+        'durationMs': stopwatch.elapsedMilliseconds,
+      });
+      rethrow;
     }
-    return result;
   }
 
   Future<Map<String, dynamic>> firebaseUser() async {
@@ -462,6 +504,7 @@ class _SessionGateState extends State<SessionGate> {
   }
 
   Future<void> restore() async {
+    AppLogger.info('session_restore_started');
     try {
       await client.init().timeout(const Duration(seconds: 10));
       final preferences = await SharedPreferences.getInstance();
@@ -488,7 +531,16 @@ class _SessionGateState extends State<SessionGate> {
           user = jsonDecode(savedUser) as Map<String, dynamic>;
         }
       }
-    } catch (exception) {
+      AppLogger.info('session_restore_succeeded', context: {
+        'authenticated': user != null,
+        'backend': client.apiEnabled
+            ? 'api'
+            : client.firebaseReady
+                ? 'firebase'
+                : 'local',
+      });
+    } catch (exception, stackTrace) {
+      AppLogger.error('session_restore_failed', exception, stackTrace);
       startupError = formatErrorMessage(exception);
     }
     if (mounted) setState(() => loading = false);
@@ -509,6 +561,8 @@ class _SessionGateState extends State<SessionGate> {
     final userKey = _userStorageKey;
     await preferences.setString(tokenKey, client.token!);
     await preferences.setString(userKey, jsonEncode(user));
+    AppLogger.info('authentication_succeeded',
+        context: {'action': register ? 'register' : 'login'});
     if (mounted) setState(() {});
   }
 
@@ -600,7 +654,13 @@ class _LoginPageState extends State<LoginPage> {
     try {
       await widget.onLogin(
           email.text, password.text, register, name.text, nim.text);
-    } catch (exception) {
+    } catch (exception, stackTrace) {
+      AppLogger.warning(
+        'authentication_failed',
+        exception,
+        stackTrace,
+        context: {'action': register ? 'register' : 'login'},
+      );
       if (mounted) {
         setState(() => error = formatErrorMessage(exception));
       }
@@ -1075,7 +1135,8 @@ class _DashboardState extends State<Dashboard> {
     setState(() => future = next);
     try {
       await next;
-    } on Exception {
+    } on Exception catch (error, stackTrace) {
+      AppLogger.warning('dashboard_refresh_failed', error, stackTrace);
       // The FutureBuilder presents the error state.
     }
   }
@@ -1513,7 +1574,10 @@ class _DataListState extends State<DataList> {
     setState(() => actionInProgress = true);
     try {
       await action();
-    } on Exception catch (error) {
+    } on Exception catch (error, stackTrace) {
+      AppLogger.warning('data_action_failed', error, stackTrace, context: {
+        'type': AppLogger.routeGroup(widget.type),
+      });
       if (mounted) _showError(error);
       return;
     } finally {

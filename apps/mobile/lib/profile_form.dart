@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app_logger.dart';
 import 'error_message.dart';
 import 'profile_repository.dart';
 import 'profile_validation.dart';
@@ -77,7 +78,8 @@ class _ProfileFormState extends State<ProfileForm> {
         _setUserFields(updatedUser);
         _success = 'Profil berhasil diperbarui.';
       });
-    } on Exception catch (exception) {
+    } on Exception catch (exception, stackTrace) {
+      AppLogger.warning('profile_update_failed', exception, stackTrace);
       if (mounted) {
         setState(() => _error = formatErrorMessage(exception));
       }
@@ -146,8 +148,7 @@ class _ProfileFormState extends State<ProfileForm> {
                 decoration: const InputDecoration(labelText: 'NIM'),
                 validator: validateProfileNim,
               ),
-              if (_error != null)
-                _statusMessage(_error!, Colors.red),
+              if (_error != null) _statusMessage(_error!, Colors.red),
               if (_success != null) _statusMessage(_success!, teal),
               const SizedBox(height: 20),
               SizedBox(
