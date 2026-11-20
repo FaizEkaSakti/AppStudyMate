@@ -131,5 +131,7 @@ https://docs.google.com/document/d/1HV6sSE5BubVThiH4S4j_-qrlLzYy_UEi12Vae2N-tVY/
 Tugas p9
 https://docs.google.com/document/d/10puPeILgFaFQpBbo72_d0QcQeZNESr_uZWTkYDrixA0/edit?usp=sharing
 
+Tugas p10
+https://github.com/FaizEkaSakti/AppStudyMate/issues/10
 
 
