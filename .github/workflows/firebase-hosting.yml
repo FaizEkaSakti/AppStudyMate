@@ -12,10 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
           cache: npm
@@ -50,6 +50,16 @@ jobs:
       - name: Build Flutter Web
         working-directory: apps/mobile
         run: flutter build web --release
+
+      - name: Verify Firebase Hosting credentials
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_APPSTUDYMATE_13DE0 }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::error::Repository secret FIREBASE_SERVICE_ACCOUNT_APPSTUDYMATE_13DE0 is missing or unavailable to this workflow."
+            exit 1
+          fi
 
       - name: Deploy to Firebase Hosting
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
