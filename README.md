@@ -36,6 +36,38 @@ cd apps/mobile
 flutter test
 ```
 
+## CI/CD dan deployment Flutter Web
+
+Workflow `.github/workflows/firebase-hosting.yml` menjalankan build shared/API,
+test API, test Flutter, dan build Flutter Web pada setiap push dan pull request.
+Deployment ke Firebase Hosting hanya dijalankan setelah semua langkah tersebut
+berhasil pada push ke `main`. Aplikasi memakai Firebase Auth/Firestore; Express
+API dan MySQL tidak di-deploy oleh workflow ini.
+
+Sebelum deployment pertama:
+
+1. Pastikan Firebase project `appstudymate-13de0` dan Firebase Hosting sudah
+   diaktifkan, serta Authentication/Firestore dikonfigurasi untuk aplikasi web.
+2. Buat service-account key yang berwenang men-deploy Firebase Hosting.
+3. Tambahkan isi JSON key sebagai GitHub Actions repository secret bernama
+   `FIREBASE_SERVICE_ACCOUNT_APPSTUDYMATE_13DE0` di **Settings → Secrets and
+   variables → Actions**. Jangan commit atau membagikan key tersebut.
+4. Push perubahan ke branch `main`. Pull request hanya menjalankan validasi;
+   setelah validasi berhasil dan perubahan di-merge/push ke `main`, workflow
+   menerbitkan versi live ke Firebase Hosting.
+
+Build Flutter Web lokal:
+
+```sh
+cd apps/mobile
+flutter pub get
+flutter build web --release
+```
+
+Output lokal berada di `apps/mobile/build/web`. URL live akan tersedia di
+Firebase Hosting setelah project, secret, dan deployment pertama berhasil
+disiapkan.
+
 # AppStudyMate
 1. Problem Statement
 
@@ -133,5 +165,8 @@ https://docs.google.com/document/d/10puPeILgFaFQpBbo72_d0QcQeZNESr_uZWTkYDrixA0/
 
 Tugas p10
 https://github.com/FaizEkaSakti/AppStudyMate/issues/10
+
+Tugas p11
+https://docs.google.com/document/d/1GiXT_oTEME7KoX6Qz9pes0pZQ2WS7bhDS10CJkxrmLA/edit?usp=sharing
 
 
